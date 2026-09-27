@@ -5,6 +5,8 @@ import dotenv from "dotenv";
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import businessRoutes from "./routes/business.routes.js";
+import socialAccountRoutes from "./routes/socialAccount.routes.js";
+import errorHandler from "./middleware/error.middleware.js";
 
 dotenv.config();
 
@@ -22,8 +24,14 @@ app.get("/", (req, res) => {
 
 // Routes
 app.use("/api/auth", authRoutes);
+
 app.use("/api/users", userRoutes);
+
 app.use("/api/businesses", businessRoutes);
+
+app.use("/api/social-accounts", socialAccountRoutes);
+
+
 
 app.use(errorHandler);
 
