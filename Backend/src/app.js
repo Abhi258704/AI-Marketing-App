@@ -25,5 +25,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/businesses", businessRoutes);
 
+app.use(errorHandler);
+
 
 export default app;
