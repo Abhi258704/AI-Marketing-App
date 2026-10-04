@@ -122,11 +122,105 @@ const getPostById = async (req, res) => {
     }
 };
 
+const updatePost = async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const {
+            title,
+            content,
+            mediaUrls,
+            postType,
+        } = req.body;
 
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+            });
+        }
+
+        const business = await Business.findOne({
+            _id: post.businessId,
+            ownerId: req.user._id,
+        });
+
+        if (!business) {
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+            });
+        }
+
+        if (title !== undefined) post.title = title;
+        if (content !== undefined) post.content = content;
+        if (mediaUrls !== undefined) post.mediaUrls = mediaUrls;
+        if (postType !== undefined) post.postType = postType;
+
+        await post.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Post updated successfully",
+            post,
+        });
+    } catch (error) {
+        console.error("Update post error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to update post",
+        });
+    }
+};
+
+const deletePost = async (req, res) => {
+    try {
+        const { postId } = req.params;
+
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+            });
+        }
+
+        const business = await Business.findOne({
+            _id: post.businessId,
+            ownerId: req.user._id,
+        });
+
+        if (!business) {
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+            });
+        }
+
+        await Post.findByIdAndDelete(postId);
+
+        return res.status(200).json({
+            success: true,
+            message: "Post deleted successfully",
+        });
+    } catch (error) {
+        console.error("Delete post error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to delete post",
+        });
+    }
+};
 
 
 export {
     createPost,
     getMyPosts,
     getPostById,
+    updatePost,
+    deletePost,
 };

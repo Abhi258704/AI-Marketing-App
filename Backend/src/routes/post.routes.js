@@ -3,6 +3,8 @@ import {
     createPost,
     getMyPosts,
     getPostById,
+    updatePost,
+    deletePost,
 } from "../controllers/post.controller.js";
 import authMiddleware from "../middleware/auth.middleware.js";
 
@@ -30,6 +32,17 @@ router.get(
     getPostById
 );
 
+router.patch(
+    "/:postId",
+    authMiddleware,
+    updatePost
+);
+
+router.delete(
+    "/:postId",
+    authMiddleware,
+    deletePost
+);
 
 
 
