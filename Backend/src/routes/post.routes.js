@@ -5,6 +5,7 @@ import {
     getPostById,
     updatePost,
     deletePost,
+    schedulePost,
 } from "../controllers/post.controller.js";
 import authMiddleware from "../middleware/auth.middleware.js";
 
@@ -42,6 +43,12 @@ router.delete(
     "/:postId",
     authMiddleware,
     deletePost
+);
+
+router.patch(
+    "/:postId/schedule",
+    authMiddleware,
+    schedulePost
 );
 
 

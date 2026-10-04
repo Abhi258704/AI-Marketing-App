@@ -216,6 +216,83 @@ const deletePost = async (req, res) => {
     }
 };
 
+const schedulePost = async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { scheduledAt } = req.body;
+
+        if (!scheduledAt) {
+            return res.status(400).json({
+                success: false,
+                message: "scheduledAt is required",
+            });
+        }
+
+        const scheduledDate = new Date(scheduledAt);
+
+        if (isNaN(scheduledDate.getTime())) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid scheduledAt",
+            });
+        }
+
+        if (scheduledDate <= new Date()) {
+            return res.status(400).json({
+                success: false,
+                message: "scheduledAt must be in the future",
+            });
+        }
+
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+            });
+        }
+
+        const business = await Business.findOne({
+            _id: post.businessId,
+            ownerId: req.user._id,
+            isActive: true,
+        });
+
+        if (!business) {
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+            });
+        }
+
+        if (post.status !== "draft") {
+            return res.status(400).json({
+                success: false,
+                message: "Only draft posts can be scheduled",
+            });
+        }
+
+        post.status = "scheduled";
+        post.scheduledAt = scheduledDate;
+
+        await post.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Post scheduled successfully",
+            post,
+        });
+    } catch (error) {
+        console.error("Schedule post error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to schedule post",
+        });
+    }
+};
+
 
 export {
     createPost,
@@ -223,4 +300,5 @@ export {
     getPostById,
     updatePost,
     deletePost,
+    schedulePost,
 };
