@@ -53,6 +53,28 @@ Tone: ${tone || "engaging"}
 
 Generate content specifically suitable for ${platform}.
 
+Platform guidelines:
+
+- Instagram:
+  - Make the caption engaging and visually appealing.
+  - Use emojis naturally.
+  - Keep the caption concise enough for social media.
+  - Include exactly 5 relevant hashtags.
+  - End with a clear call-to-action.
+
+- Facebook:
+  - Write a slightly more detailed post.
+  - Make it conversational and shareable.
+  - Use emojis naturally.
+  - Include exactly 5 relevant hashtags.
+  - Include a clear call-to-action.
+
+- Google Business:
+  - Keep the content professional and local-business focused.
+  - Highlight useful information for potential customers.
+  - Avoid excessive emojis.
+  - Include exactly 5 relevant hashtags.
+  - Include a clear call-to-action.
 Return ONLY valid JSON in exactly this structure:
 
 {
@@ -73,6 +95,8 @@ Rules:
 - The caption should be natural and engaging.
 - The callToAction should be short.
 - Provide exactly 5 relevant hashtags.
+- Do not use the business website as a registration or booking link unless explicitly requested.
+- Do not invent URLs.
 - Do not invent business information that was not provided.
 `;
 

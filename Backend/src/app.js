@@ -8,6 +8,7 @@ import businessRoutes from "./routes/business.routes.js";
 import socialAccountRoutes from "./routes/socialAccount.routes.js";
 import errorHandler from "./middleware/error.middleware.js";
 import aiRoutes from "./routes/ai.routes.js";
+import postRoutes from "./routes/post.routes.js";
 
 dotenv.config();
 
@@ -33,6 +34,8 @@ app.use("/api/businesses", businessRoutes);
 app.use("/api/social-accounts", socialAccountRoutes);
 
 app.use("/api/ai", aiRoutes);
+
+app.use("/api/posts", postRoutes);
 
 
 app.use(errorHandler);
