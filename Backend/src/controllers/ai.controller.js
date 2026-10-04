@@ -1,6 +1,5 @@
 import { generateMarketingContent } from "../services/ai.service.js";
-
-
+import Business from "../models/business.model.js";
 
 
 
@@ -9,26 +8,44 @@ import { generateMarketingContent } from "../services/ai.service.js";
 const generateContent = async (req, res) => {
     try {
         const {
-            businessName,
+            businessId,
             platform,
             topic,
             goal,
             tone,
         } = req.body;
 
-        if (!businessName || !platform || !topic) {
+        if (!businessId || !platform || !topic) {
             return res.status(400).json({
                 success: false,
-                message: "businessName, platform and topic are required",
+                message: "businessId, platform and topic are required",
+            });
+        }
+
+        const business = await Business.findOne({
+            _id: businessId,
+            ownerId: req.user._id,
+            isActive: true,
+        });
+
+        if (!business) {
+            return res.status(404).json({
+                success: false,
+                message: "Business not found",
             });
         }
 
         const prompt = `
 You are an AI marketing assistant.
 
-Create marketing content for the following business:
+Create marketing content for this business:
 
-Business Name: ${businessName}
+Business Name: ${business.name}
+Category: ${business.category || "Not specified"}
+Description: ${business.description || "Not specified"}
+Address: ${business.address || "Not specified"}
+Website: ${business.website || "Not specified"}
+
 Platform: ${platform}
 Topic: ${topic}
 Marketing Goal: ${goal || "increase engagement"}
@@ -56,6 +73,7 @@ Rules:
 - The caption should be natural and engaging.
 - The callToAction should be short.
 - Provide exactly 5 relevant hashtags.
+- Do not invent business information that was not provided.
 `;
 
         const content = await generateMarketingContent(prompt);
@@ -65,7 +83,10 @@ Rules:
             content,
         });
     } catch (error) {
-        console.error("AI content generation error:", error);
+        console.error(
+            "AI content generation error:",
+            error.response?.data || error.message || error
+        );
 
         return res.status(500).json({
             success: false,
