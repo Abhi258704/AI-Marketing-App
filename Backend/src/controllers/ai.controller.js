@@ -36,12 +36,26 @@ Tone: ${tone || "engaging"}
 
 Generate content specifically suitable for ${platform}.
 
-Return:
-1. A marketing caption
-2. A short call-to-action
-3. 5 relevant hashtags
+Return ONLY valid JSON in exactly this structure:
 
-Keep the content natural, engaging and ready to publish.
+{
+  "caption": "A ready-to-publish marketing caption",
+  "callToAction": "A short and effective call-to-action",
+  "hashtags": [
+    "#hashtag1",
+    "#hashtag2",
+    "#hashtag3",
+    "#hashtag4",
+    "#hashtag5"
+  ]
+}
+
+Rules:
+- Do not use Markdown.
+- Do not wrap the JSON in a code block.
+- The caption should be natural and engaging.
+- The callToAction should be short.
+- Provide exactly 5 relevant hashtags.
 `;
 
         const content = await generateMarketingContent(prompt);
