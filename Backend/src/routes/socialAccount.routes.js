@@ -6,7 +6,7 @@ import {
   instagramCallback,
   connectInstagram,
 } from "../controllers/socialAccount.controller.js";
-
+import { facebookCallback } from "../controllers/facebook.controller.js";
 
 
 
@@ -30,5 +30,6 @@ router.get(
   connectInstagram
 );
 
+router.get("/facebook/callback", facebookCallback);
 
 export default router;
