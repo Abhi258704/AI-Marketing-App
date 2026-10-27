@@ -32,6 +32,21 @@ const getFacebookPages = async (accessToken) => {
     return response.data;
 };
 
+const createFacebookPost = async ({
+    pageId,
+    pageAccessToken,
+    message,
+}) => {
+    const response = await axios.post(
+        `https://graph.facebook.com/v26.0/${pageId}/feed`,
+        {
+            message,
+            access_token: pageAccessToken,
+        }
+    );
+
+    return response.data;
+};
 
 
 
@@ -40,4 +55,5 @@ const getFacebookPages = async (accessToken) => {
 export {
     exchangeFacebookCode,
     getFacebookPages,
-}
+    createFacebookPost,
+};
