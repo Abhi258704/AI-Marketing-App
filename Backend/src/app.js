@@ -12,6 +12,7 @@ import postRoutes from "./routes/post.routes.js";
 import postPublicationRoutes from "./routes/postPublication.routes.js";
 import instagramRoutes from "./routes/instagram.routes.js";
 import facebookRoutes from "./routes/facebook.routes.js";
+import publishRoutes from "./routes/publish.routes.js";
 
 dotenv.config();
 
@@ -45,6 +46,8 @@ app.use("/api/post-publications", postPublicationRoutes);
 app.use("/api/instagram", instagramRoutes);
 
 app.use("/api/facebook", facebookRoutes);
+
+app.use("/api/publish", publishRoutes);
 
 
 app.use(errorHandler);

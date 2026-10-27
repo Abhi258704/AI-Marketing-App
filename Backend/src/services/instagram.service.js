@@ -46,8 +46,26 @@ const publishInstagramMediaContainer = async ({
     return response.data;
 };
 
+const getInstagramMediaContainerStatus = async ({
+    containerId,
+    accessToken,
+}) => {
+    const response = await axios.get(
+        `https://graph.instagram.com/v26.0/${containerId}`,
+        {
+            params: {
+                fields: "status_code,status",
+                access_token: accessToken,
+            },
+        }
+    );
+
+    return response.data;
+};
+
 
 export {
     createInstagramMediaContainer,
     publishInstagramMediaContainer,
+    getInstagramMediaContainerStatus,
 };
