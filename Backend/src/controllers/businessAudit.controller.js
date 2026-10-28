@@ -1,6 +1,6 @@
 import Business from "../models/business.model.js";
 import { runBusinessAudit } from "../services/businessAudit.service.js";
-
+import { createNotification } from "../services/notification.service.js";
 
 
 
@@ -30,6 +30,14 @@ const generateBusinessAudit = async (req, res) => {
         }
 
         const result = await runBusinessAudit(business);
+
+        await createNotification({
+            userId: req.user._id,
+            businessId: business._id,
+            type: "audit_completed",
+            title: "Business audit completed",
+            message: `Your AI business audit for "${business.name}" is ready.`,
+        });
 
         return res.status(201).json({
             success: true,

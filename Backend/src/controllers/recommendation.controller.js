@@ -2,6 +2,7 @@
 import Business from "../models/business.model.js";
 import BusinessAudit from "../models/businessAudit.model.js";
 import Recommendation from "../models/recommendation.model.js";
+import { createNotification } from "../services/notification.service.js";
 
 
 
@@ -104,11 +105,23 @@ const updateRecommendationStatus = async (req, res) => {
             });
         }
 
+        const previousStatus = recommendation.status;
+
         recommendation.status = status;
         recommendation.completedAt =
             status === "completed" ? new Date() : null;
 
         await recommendation.save();
+
+        if (status === "completed" && previousStatus !== "completed") {
+            await createNotification({
+                userId: req.user._id,
+                businessId: business._id,
+                type: "recommendation_completed",
+                title: "Recommendation completed",
+                message: `You completed the recommendation "${recommendation.title}".`,
+            });
+        }
 
         return res.status(200).json({
             success: true,
