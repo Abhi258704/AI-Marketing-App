@@ -41,7 +41,7 @@ const processScheduledPosts = async () => {
                 const socialAccounts = await SocialAccount.find({
                     businessId: business._id,
                     platform: {
-                        $in: ["facebook", "instagram"],
+                        $in: post.platforms,
                     },
                     status: "connected",
                 });

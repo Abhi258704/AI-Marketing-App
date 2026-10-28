@@ -11,6 +11,7 @@ const createPost = async (req, res) => {
             content,
             mediaUrls,
             postType,
+            platforms,
         } = req.body;
 
         if (!businessId || !content) {
@@ -40,6 +41,7 @@ const createPost = async (req, res) => {
             mediaUrls: mediaUrls || [],
             postType: postType || "social_post",
             status: "draft",
+            platforms,
         });
 
         return res.status(201).json({
@@ -130,6 +132,7 @@ const updatePost = async (req, res) => {
             content,
             mediaUrls,
             postType,
+            platforms,
         } = req.body;
 
         const post = await Post.findById(postId);
@@ -157,6 +160,7 @@ const updatePost = async (req, res) => {
         if (content !== undefined) post.content = content;
         if (mediaUrls !== undefined) post.mediaUrls = mediaUrls;
         if (postType !== undefined) post.postType = postType;
+        if (platforms !== undefined) post.platforms = platforms;
 
         await post.save();
 

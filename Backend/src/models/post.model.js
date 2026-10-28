@@ -31,6 +31,12 @@ const postSchema = new mongoose.Schema(
             default: "social_post",
         },
 
+        platforms: {
+            type: [String],
+            enum: ["facebook", "instagram"],
+            default: ["facebook", "instagram"],
+        },
+
         status: {
             type: String,
             enum: ["draft", "scheduled", "processing", "published", "failed"],
