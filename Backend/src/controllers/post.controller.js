@@ -277,6 +277,13 @@ const schedulePost = async (req, res) => {
             });
         }
 
+        if (!post.platforms || post.platforms.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "At least one platform is required",
+            });
+        }
+
         post.status = "scheduled";
         post.scheduledAt = scheduledDate;
 
