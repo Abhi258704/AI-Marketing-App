@@ -24,6 +24,9 @@ const processScheduledPosts = async () => {
 
         for (const post of posts) {
             try {
+                post.status = "processing";
+                await post.save();
+
                 const business = await Business.findOne({
                     _id: post.businessId,
                     isActive: true,
@@ -120,7 +123,7 @@ const processScheduledPosts = async () => {
                                 ) {
                                     throw new Error(
                                         containerStatus.status ||
-                                            "Instagram media container failed"
+                                        "Instagram media container failed"
                                     );
                                 }
 
