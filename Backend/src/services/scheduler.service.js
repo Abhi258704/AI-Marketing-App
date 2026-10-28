@@ -192,6 +192,9 @@ const processScheduledPosts = async () => {
                     await post.save();
                 }
             } catch (error) {
+                post.status = "failed";
+                await post.save();
+
                 console.error(
                     `Failed to process scheduled post ${post._id}:`,
                     error.message
