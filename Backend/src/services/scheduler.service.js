@@ -9,10 +9,14 @@ import {
     getInstagramMediaContainerStatus,
 } from "./instagram.service.js";
 
+
+
+const MAX_PUBLICATION_ATTEMPTS = 3;
+
 const processScheduledPosts = async () => {
     try {
         const posts = await Post.find({
-            status: "scheduled",
+            status: { $in: ["scheduled", "processing"] },
             scheduledAt: { $lte: new Date() },
         });
 
@@ -45,6 +49,17 @@ const processScheduledPosts = async () => {
                     },
                     status: "connected",
                 });
+
+                if (socialAccounts.length === 0) {
+                    post.status = "failed";
+                    await post.save();
+
+                    console.error(
+                        `No connected social accounts found for scheduled post ${post._id}`
+                    );
+
+                    continue;
+                }
 
                 for (const socialAccount of socialAccounts) {
                     let publication = await PostPublication.findOne({
@@ -183,13 +198,24 @@ const processScheduledPosts = async () => {
 
                 const allPublished =
                     publications.length > 0 &&
-                    publications.every(
-                        (publication) => publication.status === "published"
-                    );
+                    publications.every((publication) => publication.status === "published");
+
+                const retriesExhausted = publications.some(
+                    (publication) =>
+                        publication.status === "failed" &&
+                        publication.attemptCount >= MAX_PUBLICATION_ATTEMPTS
+                );
 
                 if (allPublished) {
                     post.status = "published";
                     await post.save();
+                } else if (retriesExhausted) {
+                    post.status = "failed";
+                    await post.save();
+
+                    console.error(
+                        `Scheduled post ${post._id} failed after ${MAX_PUBLICATION_ATTEMPTS} attempts`
+                    );
                 }
             } catch (error) {
                 post.status = "failed";

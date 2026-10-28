@@ -304,6 +304,59 @@ const schedulePost = async (req, res) => {
     }
 };
 
+const cancelScheduledPost = async (req, res) => {
+    try {
+        const { postId } = req.params;
+
+        const post = await Post.findById(postId);
+
+        if (!post) {
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+            });
+        }
+
+        const business = await Business.findOne({
+            _id: post.businessId,
+            ownerId: req.user._id,
+            isActive: true,
+        });
+
+        if (!business) {
+            return res.status(404).json({
+                success: false,
+                message: "Post not found",
+            });
+        }
+
+        if (post.status !== "scheduled") {
+            return res.status(400).json({
+                success: false,
+                message: "Only scheduled posts can be cancelled",
+            });
+        }
+
+        post.status = "draft";
+        post.scheduledAt = null;
+
+        await post.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "Scheduled post cancelled successfully",
+            post,
+        });
+    } catch (error) {
+        console.error("Cancel scheduled post error:", error);
+
+        return res.status(500).json({
+            success: false,
+            message: "Failed to cancel scheduled post",
+        });
+    }
+};
+
 
 export {
     createPost,
@@ -312,4 +365,5 @@ export {
     updatePost,
     deletePost,
     schedulePost,
+    cancelScheduledPost,
 };
