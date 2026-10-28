@@ -39,7 +39,14 @@ const postSchema = new mongoose.Schema(
 
         status: {
             type: String,
-            enum: ["draft", "scheduled", "processing", "published", "failed"],
+            enum: [
+                "draft",
+                "scheduled",
+                "processing",
+                "published",
+                "partially_published",
+                "failed",
+            ],
             default: "draft",
         },
 

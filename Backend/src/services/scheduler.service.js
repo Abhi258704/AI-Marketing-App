@@ -200,6 +200,10 @@ const processScheduledPosts = async () => {
                     publications.length > 0 &&
                     publications.every((publication) => publication.status === "published");
 
+                const anyPublished = publications.some(
+                    (publication) => publication.status === "published"
+                );
+
                 const retriesExhausted = publications.some(
                     (publication) =>
                         publication.status === "failed" &&
@@ -210,11 +214,11 @@ const processScheduledPosts = async () => {
                     post.status = "published";
                     await post.save();
                 } else if (retriesExhausted) {
-                    post.status = "failed";
+                    post.status = anyPublished ? "partially_published" : "failed";
                     await post.save();
 
                     console.error(
-                        `Scheduled post ${post._id} failed after ${MAX_PUBLICATION_ATTEMPTS} attempts`
+                        `Scheduled post ${post._id} ended with status: ${post.status}`
                     );
                 }
             } catch (error) {
