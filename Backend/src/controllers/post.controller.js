@@ -270,10 +270,10 @@ const schedulePost = async (req, res) => {
             });
         }
 
-        if (post.status !== "draft") {
+        if (!["draft", "scheduled"].includes(post.status)) {
             return res.status(400).json({
                 success: false,
-                message: "Only draft posts can be scheduled",
+                message: "Only draft or scheduled posts can be scheduled",
             });
         }
 
