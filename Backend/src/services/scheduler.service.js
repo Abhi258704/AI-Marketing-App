@@ -8,6 +8,7 @@ import {
     publishInstagramMediaContainer,
     getInstagramMediaContainerStatus,
 } from "./instagram.service.js";
+import { createNotification } from "./notification.service.js";
 
 
 
@@ -53,6 +54,14 @@ const processScheduledPosts = async () => {
                 if (socialAccounts.length === 0) {
                     post.status = "failed";
                     await post.save();
+
+                    await createNotification({
+                        userId: business.ownerId,
+                        businessId: business._id,
+                        type: "post_failed",
+                        title: "Scheduled post failed",
+                        message: `Your scheduled post "${post.title}" could not be published because no connected accounts were found for the selected platforms.`,
+                    });
 
                     console.error(
                         `No connected social accounts found for scheduled post ${post._id}`
@@ -192,13 +201,16 @@ const processScheduledPosts = async () => {
                     }
                 }
 
+
                 const publications = await PostPublication.find({
                     postId: post._id,
                 });
 
                 const allPublished =
                     publications.length > 0 &&
-                    publications.every((publication) => publication.status === "published");
+                    publications.every(
+                        (publication) => publication.status === "published"
+                    );
 
                 const anyPublished = publications.some(
                     (publication) => publication.status === "published"
@@ -213,14 +225,44 @@ const processScheduledPosts = async () => {
                 if (allPublished) {
                     post.status = "published";
                     await post.save();
+
+                    await createNotification({
+                        userId: business.ownerId,
+                        businessId: business._id,
+                        type: "post_published",
+                        title: "Post published successfully",
+                        message: `Your scheduled post "${post.title}" was published successfully.`,
+                    });
                 } else if (retriesExhausted) {
-                    post.status = anyPublished ? "partially_published" : "failed";
+                    post.status = anyPublished
+                        ? "partially_published"
+                        : "failed";
+
                     await post.save();
+
+                    if (post.status === "partially_published") {
+                        await createNotification({
+                            userId: business.ownerId,
+                            businessId: business._id,
+                            type: "post_partially_published",
+                            title: "Post partially published",
+                            message: `Your post "${post.title}" was published on some platforms but failed on others after ${MAX_PUBLICATION_ATTEMPTS} attempts.`,
+                        });
+                    } else {
+                        await createNotification({
+                            userId: business.ownerId,
+                            businessId: business._id,
+                            type: "post_failed",
+                            title: "Scheduled post failed",
+                            message: `Your scheduled post "${post.title}" failed to publish after ${MAX_PUBLICATION_ATTEMPTS} attempts.`,
+                        });
+                    }
 
                     console.error(
                         `Scheduled post ${post._id} ended with status: ${post.status}`
                     );
                 }
+
             } catch (error) {
                 post.status = "failed";
                 await post.save();
