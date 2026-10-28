@@ -28,7 +28,7 @@ const connectFacebook = async (req, res) => {
                 client_id: process.env.FACEBOOK_APP_ID,
                 redirect_uri: process.env.FACEBOOK_REDIRECT_URI,
                 response_type: "code",
-                scope: "pages_show_list,pages_manage_posts,pages_read_engagement",
+                scope: "pages_show_list,pages_manage_posts,pages_read_engagement,read_insights",
                 state: businessId,
             }).toString();
 
