@@ -24,6 +24,17 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Health check endpoint for uptime monitoring
+app.get("/health", (_req, res) => {
+  res.status(200).json({
+    status: "ok",
+    service: "ai-marketing-api",
+    timestamp: new Date().toISOString(),
+    uptimeSeconds: Math.floor(process.uptime()),
+  });
+});
+
+
 app.get("/", (req, res) => {
   res.json({
     message: "AI Marketing Platform API is running",
