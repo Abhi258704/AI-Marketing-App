@@ -1,26 +1,64 @@
 @import "tailwindcss";
 
+/* Design tokens. Light theme only: a half-finished dark mode would hurt more than help. */
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-canvas: #f6f6f3;
+  --color-surface: #ffffff;
+  --color-sunken: #efefea;
+  --color-line: #e3e3dc;
+  --color-line-strong: #cfcfc6;
+  --color-ink: #17181c;
+  --color-muted: #5f636c;
+
+  --color-brand-50: #effaf7;
+  --color-brand-100: #d3f3ea;
+  --color-brand-200: #a8e6d6;
+  --color-brand-500: #1aa588;
+  --color-brand-600: #0e8a72;
+  --color-brand-700: #0b705d;
+  --color-brand-800: #0a584a;
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+html,
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
 
-/* body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-} */
+/* Visible keyboard focus everywhere. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
+dialog::backdrop {
+  background: rgb(23 24 28 / 0.45);
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-sunken) 25%, #f7f7f3 50%, var(--color-sunken) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+  * { scroll-behavior: auto !important; }
+}

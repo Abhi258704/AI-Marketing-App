@@ -1,52 +1,18 @@
 "use client";
 
-import { GoogleLogin } from "@react-oauth/google";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/providers/auth-provider";
+import { FullPageSpinner } from "@/components/layout/auth-gate";
 
 export default function Home() {
-  const handleSuccess = async (credentialResponse) => {
-    console.log("Google credential received");
+  const { status } = useAuth();
+  const router = useRouter();
 
-    try {
-      const response = await fetch(
-        "http://localhost:8000/api/auth/google",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            credential: credentialResponse.credential,
-          }),
-        }
-      );
+  useEffect(() => {
+    if (status === "authenticated") router.replace("/dashboard");
+    if (status === "unauthenticated") router.replace("/login");
+  }, [status, router]);
 
-      const data = await response.json();
-
-      console.log("Backend response:", data);
-
-      if (!response.ok) {
-        console.error("Login failed:", data);
-        return;
-      }
-
-      localStorage.setItem("token", data.token);
-
-      console.log("Login successful!");
-    } catch (error) {
-      console.error("Request failed:", error);
-    }
-  };
-
-  return (
-    <main>
-      <h1>AI Marketing Platform</h1>
-
-      <GoogleLogin
-        onSuccess={handleSuccess}
-        onError={() => {
-          console.log("Google Login Failed");
-        }}
-      />
-    </main>
-  );
+  return <FullPageSpinner />;
 }
