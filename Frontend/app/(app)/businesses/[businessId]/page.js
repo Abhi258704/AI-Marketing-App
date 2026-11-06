@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, Badge, CardSkeleton, ErrorState } from "@/components/ui/feedback";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { BusinessForm } from "@/components/business/business-form";
+import { FeedbackQrCard } from "@/components/business/feedback-qr-card";
 import { useApi } from "@/lib/use-api";
 import { getBusiness, toggleBusinessStatus, updateBusiness } from "@/lib/api/businesses";
 import { getErrorMessage } from "@/lib/api/client";
@@ -129,6 +130,10 @@ export default function BusinessDetailPage({ params }) {
                 </div>
               </dl>
             </Card>
+          )}
+
+          {!editing && business.isActive && (
+            <FeedbackQrCard businessId={businessId} businessName={business.name} />
           )}
 
           <ConfirmDialog
