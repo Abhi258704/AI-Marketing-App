@@ -44,7 +44,7 @@ export default function NotificationsPage() {
     <>
       <PageHeader
         title="Notifications"
-        description="Updates about your posts, audits and recommendations. This page refreshes when you open it and about once a minute."
+        description="Updates about your posts, audits, recommendations and customer feedback. This page refreshes when you open it and about once a minute."
         actions={
           <>
             <Button variant="secondary" onClick={refresh}>Refresh</Button>
@@ -65,7 +65,7 @@ export default function NotificationsPage() {
       {error && !notifications.length && <ErrorState error={error} onRetry={refresh} title="Couldn't load notifications" />}
 
       {loaded && !error && list.length === 0 && (
-        <EmptyState icon={Bell} title={filter === "unread" ? "No unread notifications" : "No notifications yet"} description="You'll see updates here when posts publish or fail, audits finish and recommendations are completed." />
+        <EmptyState icon={Bell} title={filter === "unread" ? "No unread notifications" : "No notifications yet"} description="You'll see updates here when posts publish or fail, audits finish, recommendations are completed or customers submit feedback." />
       )}
 
       {list.length > 0 && (
