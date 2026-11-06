@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Link2,
   ListChecks,
+  MessageSquareText,
   Settings,
   Sparkles,
 } from "lucide-react";
@@ -38,6 +39,7 @@ export const NAV_GROUPS = [
     items: [
       { href: "/businesses", label: "Businesses", icon: Building2 },
       { href: "/social-accounts", label: "Social accounts", icon: Link2 },
+      { href: "/reviews", label: "Review moderation", icon: MessageSquareText, adminOnly: true },
       { href: "/notifications", label: "Notifications", icon: Bell },
       { href: "/settings", label: "Settings", icon: Settings },
     ],
