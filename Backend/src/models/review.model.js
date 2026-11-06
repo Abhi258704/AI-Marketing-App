@@ -37,6 +37,10 @@ const reviewSchema = new mongoose.Schema(
       trim: true,
       maxlength: 2000,
     },
+    publicDisplayConsent: {
+      type: Boolean,
+      default: false,
+    },
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
