@@ -6,7 +6,6 @@ import { Megaphone } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { NAV_GROUPS } from "./nav-config";
 import { useNotifications } from "@/components/providers/notifications-provider";
-import { useAuth } from "@/components/providers/auth-provider";
 
 export function Brand() {
   return (
@@ -25,7 +24,6 @@ export function Brand() {
 export function SidebarNav({ onNavigate }) {
   const pathname = usePathname();
   const { unreadCount } = useNotifications();
-  const { user } = useAuth();
 
   return (
     <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
@@ -38,7 +36,6 @@ export function SidebarNav({ onNavigate }) {
           )}
           <ul className="space-y-0.5">
             {group.items
-              .filter((item) => !item.adminOnly || user?.role === "admin")
               .map(({ href, label, icon: Icon }) => {
               const active = pathname === href || pathname.startsWith(`${href}/`);
               return (
