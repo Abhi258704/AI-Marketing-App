@@ -6,6 +6,9 @@ export const submitFeedback = (body) =>
 export const listTestimonials = (businessId, query = {}) =>
   apiFetch(`/api/reviews/business/${businessId}`, { query, auth: false });
 
+export const getPendingReviewCount = () =>
+  apiFetch("/api/reviews/manage/pending-count");
+
 export const listAdminReviews = (query = {}) =>
   apiFetch("/api/reviews/manage", { query });
 
