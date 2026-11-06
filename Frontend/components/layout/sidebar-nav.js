@@ -40,10 +40,7 @@ export function SidebarNav({ onNavigate }) {
   }, []);
 
   useEffect(() => {
-    if (!user?.id) {
-      setPendingReviewCount(0);
-      return undefined;
-    }
+    if (!user?.id) return undefined;
 
     refreshPendingReviews();
 
