@@ -3,6 +3,7 @@ import authMiddleware from "../middleware/auth.middleware.js";
 import {
   createReview,
   getApprovedTestimonials,
+  getPendingReviewCount,
   getAdminReviews,
   moderateReview,
 } from "../controllers/review.controller.js";
@@ -17,6 +18,7 @@ router.get("/business/:businessId", getApprovedTestimonials);
 
 // Signed-in business owners can moderate their own businesses.
 // Platform admins can moderate across all businesses.
+router.get("/manage/pending-count", authMiddleware, getPendingReviewCount);
 router.get("/manage", authMiddleware, getAdminReviews);
 router.patch("/:reviewId/moderation", authMiddleware, moderateReview);
 
