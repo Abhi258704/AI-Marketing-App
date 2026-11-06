@@ -206,14 +206,47 @@ const getAdminReviews = async (req, res) => {
       filter.status = status;
     }
 
-    if (businessId) {
-      if (!mongoose.Types.ObjectId.isValid(businessId)) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid businessId",
-        });
+    // Platform admins can review all businesses. Other signed-in users
+    // are restricted to businesses they own.
+    if (req.user.role === "admin") {
+      if (businessId) {
+        if (!mongoose.Types.ObjectId.isValid(businessId)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid businessId",
+          });
+        }
+        filter.businessId = businessId;
       }
-      filter.businessId = businessId;
+    } else {
+      const ownedBusinesses = await Business.find({
+        ownerId: req.user._id,
+      }).select("_id").lean();
+      const ownedBusinessIds = ownedBusinesses.map((business) => business._id);
+
+      if (businessId) {
+        if (!mongoose.Types.ObjectId.isValid(businessId)) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid businessId",
+          });
+        }
+
+        const ownsRequestedBusiness = ownedBusinessIds.some(
+          (ownedId) => ownedId.toString() === businessId
+        );
+
+        if (!ownsRequestedBusiness) {
+          return res.status(403).json({
+            success: false,
+            message: "You can only manage feedback for businesses you own",
+          });
+        }
+
+        filter.businessId = businessId;
+      } else {
+        filter.businessId = { $in: ownedBusinessIds };
+      }
     }
 
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
@@ -244,7 +277,7 @@ const getAdminReviews = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("Get admin reviews error:", error);
+    console.error("Get manageable reviews error:", error);
 
     return res.status(500).json({
       success: false,
@@ -289,6 +322,20 @@ const moderateReview = async (req, res) => {
         success: false,
         message: "Review not found",
       });
+    }
+
+    if (req.user.role !== "admin") {
+      const ownsBusiness = await Business.exists({
+        _id: review.businessId,
+        ownerId: req.user._id,
+      });
+
+      if (!ownsBusiness) {
+        return res.status(403).json({
+          success: false,
+          message: "You can only moderate feedback for businesses you own",
+        });
+      }
     }
 
     if (status === "approved" && !review.publicDisplayConsent) {
