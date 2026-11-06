@@ -44,7 +44,7 @@ export default function NotificationsPage() {
     <>
       <PageHeader
         title="Notifications"
-        description="Updates about your posts, audits, recommendations and customer feedback. This page refreshes when you open it and about once a minute."
+        description="Updates about your posts, audits, recommendations and customer feedback. This page refreshes when you open it and about every 30 seconds."
         actions={
           <>
             <Button variant="secondary" onClick={refresh}>Refresh</Button>
