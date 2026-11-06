@@ -1,6 +1,5 @@
 import express from "express";
 import authMiddleware from "../middleware/auth.middleware.js";
-import adminMiddleware from "../middleware/admin.middleware.js";
 import {
   createReview,
   getApprovedTestimonials,
@@ -16,13 +15,9 @@ router.post("/", createReview);
 // Public endpoint returns approved testimonials only.
 router.get("/business/:businessId", getApprovedTestimonials);
 
-// Admin-only moderation endpoints.
-router.get("/admin", authMiddleware, adminMiddleware, getAdminReviews);
-router.patch(
-  "/:reviewId/moderation",
-  authMiddleware,
-  adminMiddleware,
-  moderateReview
-);
+// Signed-in business owners can moderate their own businesses.
+// Platform admins can moderate across all businesses.
+router.get("/manage", authMiddleware, getAdminReviews);
+router.patch("/:reviewId/moderation", authMiddleware, moderateReview);
 
 export default router;
