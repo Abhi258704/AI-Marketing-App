@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import Business from "../models/business.model.js";
 import Review from "../models/review.model.js";
+import { createNotification } from "../services/notification.service.js";
 
 const createReview = async (req, res) => {
   try {
@@ -65,7 +66,7 @@ const createReview = async (req, res) => {
     const business = await Business.findOne({
       _id: businessId,
       isActive: true,
-    }).select("_id");
+    }).select("_id ownerId name");
 
     if (!business) {
       return res.status(404).json({
@@ -90,6 +91,16 @@ const createReview = async (req, res) => {
       publicDisplayConsent,
       status: "pending",
     });
+
+    if (business.ownerId) {
+      await createNotification({
+        userId: business.ownerId,
+        businessId: business._id,
+        type: "review_received",
+        title: "New customer feedback",
+        message: `${customerName.trim()} submitted a ${numericRating}/5 rating.`,
+      });
+    }
 
     return res.status(201).json({
       success: true,
