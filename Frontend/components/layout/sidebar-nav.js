@@ -1,11 +1,14 @@
 "use client";
 
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Megaphone } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { NAV_GROUPS } from "./nav-config";
 import { useNotifications } from "@/components/providers/notifications-provider";
+import { useAuth } from "@/components/providers/auth-provider";
+import { getPendingReviewCount } from "@/lib/api/reviews";
 
 export function Brand() {
   return (
@@ -24,6 +27,44 @@ export function Brand() {
 export function SidebarNav({ onNavigate }) {
   const pathname = usePathname();
   const { unreadCount } = useNotifications();
+  const { user } = useAuth();
+  const [pendingReviewCount, setPendingReviewCount] = useState(0);
+
+  const refreshPendingReviews = useCallback(async () => {
+    try {
+      const result = await getPendingReviewCount();
+      setPendingReviewCount(Number(result.pendingCount) || 0);
+    } catch {
+      // Keep the last known count if the API is temporarily unavailable.
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setPendingReviewCount(0);
+      return undefined;
+    }
+
+    refreshPendingReviews();
+
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") refreshPendingReviews();
+    }, 30_000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") refreshPendingReviews();
+    };
+    const onReviewsUpdated = () => refreshPendingReviews();
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("reviews:updated", onReviewsUpdated);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("reviews:updated", onReviewsUpdated);
+    };
+  }, [user?.id, refreshPendingReviews]);
 
   return (
     <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
@@ -51,6 +92,14 @@ export function SidebarNav({ onNavigate }) {
                   >
                     <Icon className={cn("h-4 w-4", active ? "text-brand-700" : "text-muted")} aria-hidden />
                     <span className="flex-1">{label}</span>
+                    {href === "/reviews" && pendingReviewCount > 0 && (
+                      <span
+                        className="rounded-full bg-rose-600 px-1.5 text-[11px] font-semibold text-white"
+                        aria-label={`${pendingReviewCount} pending feedback requests`}
+                      >
+                        {pendingReviewCount > 99 ? "99+" : pendingReviewCount}
+                      </span>
+                    )}
                     {href === "/notifications" && unreadCount > 0 && (
                       <span className="rounded-full bg-brand-700 px-1.5 text-[11px] font-semibold text-white">
                         {unreadCount > 99 ? "99+" : unreadCount}
