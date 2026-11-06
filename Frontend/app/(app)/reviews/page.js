@@ -53,6 +53,7 @@ export default function ReviewsAdminPage() {
     setNotice("");
     try {
       await moderateReview(reviewId, { status });
+      window.dispatchEvent(new Event("reviews:updated"));
       setNotice(status === "approved" ? "Feedback approved and published as a testimonial." : "Feedback rejected.");
       await loadReviews();
     } catch (err) {
