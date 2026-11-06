@@ -44,8 +44,8 @@ export default function ReviewsAdminPage() {
   }, [filter]);
 
   useEffect(() => {
-    if (user?.role === "admin") loadReviews();
-  }, [user?.role, loadReviews]);
+    if (user) loadReviews();
+  }, [user, loadReviews]);
 
   async function handleModeration(reviewId, status) {
     setBusyId(reviewId);
@@ -62,20 +62,11 @@ export default function ReviewsAdminPage() {
     }
   }
 
-  if (user?.role !== "admin") {
-    return (
-      <>
-        <PageHeader title="Review moderation" description="Admin access is required to manage customer feedback." />
-        <Card><CardBody><p className="text-sm text-muted">Your account does not have the admin role. Ask an authorised system administrator to grant access.</p></CardBody></Card>
-      </>
-    );
-  }
-
   return (
     <>
       <PageHeader
         title="Review moderation"
-        description="Review customer feedback submitted through business QR forms. Approved feedback is displayed as a testimonial on this platform."
+        description="Manage feedback submitted through QR forms for businesses you own. Platform admins can review feedback across all businesses."
         actions={<Button variant="secondary" size="sm" onClick={loadReviews}><RefreshCw className="h-4 w-4" /> Refresh</Button>}
       />
 
