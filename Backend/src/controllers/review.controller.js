@@ -187,6 +187,33 @@ const getApprovedTestimonials = async (req, res) => {
   }
 };
 
+const getPendingReviewCount = async (req, res) => {
+  try {
+    const filter = { status: "pending" };
+
+    if (req.user.role !== "admin") {
+      const ownedBusinessIds = await Business.find({
+        ownerId: req.user._id,
+      }).distinct("_id");
+      filter.businessId = { $in: ownedBusinessIds };
+    }
+
+    const pendingCount = await Review.countDocuments(filter);
+
+    return res.status(200).json({
+      success: true,
+      pendingCount,
+    });
+  } catch (error) {
+    console.error("Get pending review count error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Failed to fetch pending review count",
+    });
+  }
+};
+
 const getAdminReviews = async (req, res) => {
   try {
     const { businessId } = req.query;
@@ -381,6 +408,7 @@ const moderateReview = async (req, res) => {
 export {
   createReview,
   getApprovedTestimonials,
+  getPendingReviewCount,
   getAdminReviews,
   moderateReview,
 };
