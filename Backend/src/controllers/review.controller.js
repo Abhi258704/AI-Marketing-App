@@ -10,6 +10,7 @@ const createReview = async (req, res) => {
       customerEmail,
       rating,
       comment,
+      publicDisplayConsent = false,
     } = req.body || {};
 
     if (!businessId || !mongoose.Types.ObjectId.isValid(businessId)) {
@@ -73,12 +74,20 @@ const createReview = async (req, res) => {
       });
     }
 
+    if (typeof publicDisplayConsent !== "boolean") {
+      return res.status(400).json({
+        success: false,
+        message: "publicDisplayConsent must be a boolean",
+      });
+    }
+
     const review = await Review.create({
       businessId: business._id,
       customerName: customerName.trim(),
       customerEmail: customerEmail?.trim() || null,
       rating: numericRating,
       comment: comment.trim(),
+      publicDisplayConsent,
       status: "pending",
     });
 
@@ -132,6 +141,7 @@ const getApprovedTestimonials = async (req, res) => {
     const filter = {
       businessId: business._id,
       status: "approved",
+      publicDisplayConsent: true,
     };
 
     const [reviews, total, ratingSummary] = await Promise.all([
@@ -278,6 +288,13 @@ const moderateReview = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: "Review not found",
+      });
+    }
+
+    if (status === "approved" && !review.publicDisplayConsent) {
+      return res.status(400).json({
+        success: false,
+        message: "Customer consent is required before publishing this feedback as a public testimonial",
       });
     }
 
