@@ -11,7 +11,7 @@ import {
 const NotificationsContext = createContext(null);
 
 // There is no push channel in the backend, so we poll lightly while the tab is visible.
-const POLL_MS = 60_000;
+const POLL_MS = 30_000;
 
 export function NotificationsProvider({ children }) {
   const { user } = useAuth();
