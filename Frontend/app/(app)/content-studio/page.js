@@ -15,6 +15,7 @@ import { ConfirmDialog } from "@/components/ui/dialog";
 import {
   generateContent,
   generateMarketingImage,
+  saveMarketingPoster,
   deleteGeneratedImage,
 } from "@/lib/api/ai";
 import { API_BASE_URL } from "@/lib/config";
@@ -55,6 +56,153 @@ function normalizeResult(content) {
     callToAction: typeof content.callToAction === "string" ? content.callToAction.trim() : "",
     hashtags: Array.isArray(content.hashtags) ? content.hashtags.filter((h) => typeof h === "string") : [],
   };
+}
+
+function loadCanvasImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    if (/^https?:\\/\\//i.test(src)) image.crossOrigin = "anonymous";
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Couldn't load the generated image for poster design."));
+    image.src = src;
+  });
+}
+
+function wrapCanvasText(ctx, text, maxWidth, maxLines) {
+  const words = String(text || "").trim().split(/\\s+/).filter(Boolean);
+  const lines = [];
+  let line = "";
+
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (ctx.measureText(candidate).width <= maxWidth || !line) {
+      line = candidate;
+    } else {
+      lines.push(line);
+      line = word;
+      if (lines.length === maxLines - 1) break;
+    }
+  }
+
+  if (line && lines.length < maxLines) lines.push(line);
+  const usedWords = lines.join(" ").split(/\\s+/).filter(Boolean).length;
+  if (usedWords < words.length && lines.length) {
+    let last = lines.length - 1;
+    let shortened = lines[last];
+    while (shortened && ctx.measureText(`${shortened}…`).width > maxWidth) {
+      shortened = shortened.slice(0, -1).trimEnd();
+    }
+    lines[last] = `${shortened}…`;
+  }
+  return lines;
+}
+
+function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight, maxLines) {
+  const lines = wrapCanvasText(ctx, text, maxWidth, maxLines);
+  lines.forEach((line, index) => ctx.fillText(line, x, y + index * lineHeight));
+  return lines.length;
+}
+
+async function composeMarketingPoster({
+  backgroundUrl,
+  business,
+  headline,
+  supportingText,
+  ctaText,
+}) {
+  const image = await loadCanvasImage(backgroundUrl);
+  const canvas = document.createElement("canvas");
+  canvas.width = 1080;
+  canvas.height = 1080;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Your browser couldn't prepare the poster canvas.");
+
+  const scale = Math.max(canvas.width / image.width, canvas.height / image.height);
+  const width = image.width * scale;
+  const height = image.height * scale;
+  ctx.drawImage(image, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+
+  const overlay = ctx.createLinearGradient(0, 0, 0, 1080);
+  overlay.addColorStop(0, "rgba(8, 23, 29, 0.48)");
+  overlay.addColorStop(0.38, "rgba(8, 23, 29, 0.10)");
+  overlay.addColorStop(0.62, "rgba(8, 23, 29, 0.60)");
+  overlay.addColorStop(1, "rgba(8, 23, 29, 0.94)");
+  ctx.fillStyle = overlay;
+  ctx.fillRect(0, 0, 1080, 1080);
+
+  // A compact brand lockup at the top; use the saved logo where available.
+  ctx.fillStyle = "rgba(255,255,255,0.96)";
+  ctx.beginPath();
+  ctx.roundRect(72, 66, 94, 94, 22);
+  ctx.fill();
+
+  let logoDrawn = false;
+  if (business.logoUrl) {
+    const logoSrc = /^https?:\\/\\//i.test(business.logoUrl)
+      ? business.logoUrl
+      : `${API_BASE_URL}${business.logoUrl.startsWith("/") ? "" : "/"}${business.logoUrl}`;
+    try {
+      const logo = await loadCanvasImage(logoSrc);
+      const logoScale = Math.min(74 / logo.width, 74 / logo.height);
+      const logoWidth = logo.width * logoScale;
+      const logoHeight = logo.height * logoScale;
+      ctx.drawImage(logo, 82 + (74 - logoWidth) / 2, 76 + (74 - logoHeight) / 2, logoWidth, logoHeight);
+      logoDrawn = true;
+    } catch {
+      // A logo with restrictive CORS or a stale URL should not block poster creation.
+    }
+  }
+  if (!logoDrawn) {
+    ctx.fillStyle = "#0e8a72";
+    ctx.font = "700 48px Arial, sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(String(business.name || "B").trim().charAt(0).toUpperCase(), 119, 113);
+    ctx.textAlign = "left";
+    ctx.textBaseline = "alphabetic";
+  }
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "700 34px Arial, sans-serif";
+  drawWrappedText(ctx, business.name || "Your business", 190, 108, 800, 40, 2);
+  ctx.fillStyle = "rgba(255,255,255,0.82)";
+  ctx.font = "500 21px Arial, sans-serif";
+  ctx.fillText(String(business.category || "LOCAL BUSINESS").toUpperCase().slice(0, 52), 190, 148);
+
+  // Small accent marker separates brand identity from the campaign message.
+  ctx.fillStyle = "#36d6b0";
+  ctx.fillRect(76, 510, 68, 7);
+  ctx.fillStyle = "rgba(255,255,255,0.86)";
+  ctx.font = "700 20px Arial, sans-serif";
+  ctx.fillText("MADE FOR YOUR NEXT BIG MOVE", 76, 478);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "700 68px Arial, sans-serif";
+  const titleLines = drawWrappedText(ctx, headline || business.name, 76, 600, 920, 78, 3);
+
+  const descriptionY = 600 + titleLines * 78 + 26;
+  ctx.fillStyle = "rgba(255,255,255,0.88)";
+  ctx.font = "400 28px Arial, sans-serif";
+  drawWrappedText(ctx, supportingText || business.description || "Quality service. Trusted local expertise.", 78, descriptionY, 900, 38, 2);
+
+  const buttonY = 914;
+  const buttonLabel = String(ctaText || "CONTACT US TODAY").trim().toUpperCase().slice(0, 30);
+  ctx.fillStyle = "#0e8a72";
+  ctx.beginPath();
+  ctx.roundRect(76, buttonY, Math.max(300, Math.min(560, ctx.measureText(buttonLabel).width + 100)), 76, 18);
+  ctx.fill();
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "700 25px Arial, sans-serif";
+  ctx.fillText(buttonLabel, 112, buttonY + 48);
+
+  const contact = [business.address, business.phone].filter(Boolean).join("  •  ");
+  if (contact) {
+    ctx.fillStyle = "rgba(255,255,255,0.84)";
+    ctx.font = "500 21px Arial, sans-serif";
+    ctx.fillText(contact.slice(0, 90), 78, 1042);
+  }
+
+  return canvas.toDataURL("image/jpeg", 0.9);
 }
 
 function CopyButton({ text, label, disabled }) {
@@ -99,6 +247,9 @@ function StudioContent({ business }) {
   const [includeHashtags, setIncludeHashtags] = useState(true);
 
   const [visualPrompt, setVisualPrompt] = useState("");
+  const [posterHeadline, setPosterHeadline] = useState("");
+  const [posterSupportingText, setPosterSupportingText] = useState("");
+  const [posterCtaText, setPosterCtaText] = useState("");
   const [generatedImageUrl, setGeneratedImageUrl] = useState("");
   const [imageGenerating, setImageGenerating] = useState(false);
   const [imageError, setImageError] = useState(null);
@@ -160,6 +311,9 @@ function StudioContent({ business }) {
         setIncludeCta(typeof draft.includeCta === "boolean" ? draft.includeCta : true);
         setIncludeHashtags(typeof draft.includeHashtags === "boolean" ? draft.includeHashtags : true);
         setVisualPrompt(typeof draft.visualPrompt === "string" ? draft.visualPrompt : "");
+        setPosterHeadline(typeof draft.posterHeadline === "string" ? draft.posterHeadline : "");
+        setPosterSupportingText(typeof draft.posterSupportingText === "string" ? draft.posterSupportingText : "");
+        setPosterCtaText(typeof draft.posterCtaText === "string" ? draft.posterCtaText : "");
         const expectedImagePrefix = `/temp/${userId}/${business._id}/`;
         setGeneratedImageUrl(
           typeof draft.generatedImageUrl === "string" && draft.generatedImageUrl.startsWith(expectedImagePrefix)
@@ -195,6 +349,9 @@ function StudioContent({ business }) {
       includeCta,
       includeHashtags,
       visualPrompt,
+      posterHeadline,
+      posterSupportingText,
+      posterCtaText,
       generatedImageUrl,
       producedFor,
       savedPost,
@@ -215,6 +372,9 @@ function StudioContent({ business }) {
     includeCta,
     includeHashtags,
     visualPrompt,
+    posterHeadline,
+    posterSupportingText,
+    posterCtaText,
     generatedImageUrl,
     producedFor,
     savedPost,
@@ -254,6 +414,9 @@ function StudioContent({ business }) {
     setIncludeCta(true);
     setIncludeHashtags(true);
     setVisualPrompt("");
+    setPosterHeadline("");
+    setPosterSupportingText("");
+    setPosterCtaText("");
     setGeneratedImageUrl("");
     setImageGenerating(false);
     setImageError(null);
@@ -305,7 +468,7 @@ function StudioContent({ business }) {
 
   async function generateImageAsset() {
     if (!topic.trim()) {
-      setImageError("Describe the campaign topic before generating an image.");
+      setImageError("Describe the campaign topic before generating a poster.");
       return;
     }
 
@@ -314,6 +477,7 @@ function StudioContent({ business }) {
     const imageId = ++imageRequestId.current;
     const previousImageUrl = generatedImageUrl;
     const previousImageBelongsToSavedPost = Boolean(savedPost);
+    let backgroundMediaUrl = "";
 
     try {
       const result = await generateMarketingImage({
@@ -327,27 +491,61 @@ function StudioContent({ business }) {
       if (!result.mediaUrl || !result.mediaUrl.startsWith(`/temp/${userId}/${business._id}/`)) {
         throw new Error("The server returned an invalid image reference. Please try again.");
       }
+      backgroundMediaUrl = result.mediaUrl;
 
       if (imageId !== imageRequestId.current) {
-        await deleteGeneratedImage({ businessId: business._id, mediaUrl: result.mediaUrl }).catch(() => {});
+        await deleteGeneratedImage({ businessId: business._id, mediaUrl: backgroundMediaUrl }).catch(() => {});
         return;
       }
 
-      setGeneratedImageUrl(result.mediaUrl);
-      setImageRemaining(
-        Number.isInteger(result.remainingToday) ? result.remainingToday : null
-      );
+      const supportingText =
+        posterSupportingText.trim() ||
+        caption.trim().split(/[.!?](?:\\s|$)/)[0] ||
+        business.description ||
+        `Professional ${business.category || "local"} services you can trust.`;
+      const posterData = await composeMarketingPoster({
+        backgroundUrl: `${API_BASE_URL}${backgroundMediaUrl}`,
+        business,
+        headline: posterHeadline.trim() || topic.trim(),
+        supportingText,
+        ctaText: posterCtaText.trim() || cta.trim() || "Contact us today",
+      });
+
+      if (imageId !== imageRequestId.current) {
+        await deleteGeneratedImage({ businessId: business._id, mediaUrl: backgroundMediaUrl }).catch(() => {});
+        return;
+      }
+
+      const poster = await saveMarketingPoster({
+        businessId: business._id,
+        imageData: posterData,
+      });
+      if (!poster.mediaUrl || !poster.mediaUrl.startsWith(`/temp/${userId}/${business._id}/`)) {
+        throw new Error("The server returned an invalid poster reference. Please try again.");
+      }
+
+      if (imageId !== imageRequestId.current) {
+        await deleteGeneratedImage({ businessId: business._id, mediaUrl: poster.mediaUrl }).catch(() => {});
+        await deleteGeneratedImage({ businessId: business._id, mediaUrl: backgroundMediaUrl }).catch(() => {});
+        return;
+      }
+
+      setGeneratedImageUrl(poster.mediaUrl);
+      setImageRemaining(Number.isInteger(result.remainingToday) ? result.remainingToday : null);
       setSavedPost(null);
 
+      // Keep only the finished poster; the raw AI background is no longer needed.
+      await deleteGeneratedImage({ businessId: business._id, mediaUrl: backgroundMediaUrl }).catch(() => {});
       if (previousImageUrl && !previousImageBelongsToSavedPost) {
-        await deleteGeneratedImage({
-          businessId: business._id,
-          mediaUrl: previousImageUrl,
-        }).catch(() => {});
+        await deleteGeneratedImage({ businessId: business._id, mediaUrl: previousImageUrl }).catch(() => {});
       }
     } catch (e) {
       if (imageId === imageRequestId.current) {
-        setImageError(getErrorMessage(e, "Couldn't generate an image."));
+        // If poster composition or saving fails after background generation, preserve that usable image.
+        if (backgroundMediaUrl) setGeneratedImageUrl(backgroundMediaUrl);
+        setImageError(getErrorMessage(e, "Couldn't generate the marketing poster."));
+      } else if (backgroundMediaUrl) {
+        await deleteGeneratedImage({ businessId: business._id, mediaUrl: backgroundMediaUrl }).catch(() => {});
       }
     } finally {
       if (imageId === imageRequestId.current) setImageGenerating(false);
@@ -470,8 +668,8 @@ function StudioContent({ business }) {
         <div className="space-y-4">
       <Card className="overflow-hidden border-brand-200">
         <CardHeader
-          title="Create your campaign visual"
-          description="Generate an original image for this business and campaign."
+          title="Design your campaign poster"
+          description="Generate the artwork, then add your business details and promotional copy automatically."
           action={
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800">
               <Sparkles className="h-3.5 w-3.5" aria-hidden /> AI image
@@ -480,20 +678,46 @@ function StudioContent({ business }) {
         />
         <CardBody className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)]">
           <div className="flex min-w-0 flex-col gap-4">
-            <Textarea
-              label="Visual direction"
-              rows={5}
-              value={visualPrompt}
-              onChange={(e) => setVisualPrompt(e.target.value)}
-              maxLength={600}
-              hint="Optional. Describe the scene, style, colours, products or mood. Your business and campaign details are included automatically."
-              placeholder="e.g. Premium editorial food photography, warm natural light, rustic wooden table, appetizing close-up."
-            />
+            <div className="space-y-3">
+              <Textarea
+                label="AI design prompt"
+                rows={4}
+                value={visualPrompt}
+                onChange={(e) => setVisualPrompt(e.target.value)}
+                maxLength={600}
+                hint="Describe the photo, mood, colours and art direction. The app adds the exact poster text and business details afterward."
+                placeholder="e.g. Modern premium real estate campaign, contemporary building, warm golden-hour light, deep teal and cream palette, cinematic commercial photography."
+              />
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted">Text on your poster</p>
+              <Input
+                label="Headline (optional)"
+                value={posterHeadline}
+                onChange={(e) => setPosterHeadline(e.target.value)}
+                maxLength={90}
+                placeholder={topic || "e.g. Build your dream home"}
+              />
+              <Textarea
+                label="Supporting text (optional)"
+                rows={2}
+                value={posterSupportingText}
+                onChange={(e) => setPosterSupportingText(e.target.value)}
+                maxLength={180}
+                placeholder="A short benefit or service description"
+              />
+              <Input
+                label="Button text (optional)"
+                value={posterCtaText}
+                onChange={(e) => setPosterCtaText(e.target.value)}
+                maxLength={30}
+                placeholder={cta || "Contact us today"}
+              />
+              <p className="text-xs text-muted">Business name, logo, category, address and phone are added from the selected business profile where available.</p>
+            </div>
             <div className="flex flex-wrap items-center gap-3">
               <Button onClick={generateImageAsset} loading={imageGenerating} disabled={imageGenerating || !topic.trim()}>
-                <ImagePlus className="h-4 w-4" aria-hidden /> Generate image
+                <ImagePlus className="h-4 w-4" aria-hidden /> Generate poster
               </Button>
-              <span className="text-xs text-muted">Square format · FLUX.1 Schnell</span>
+              <span className="text-xs text-muted">1080 × 1080 · AI artwork + branded layout</span>
             </div>
             {imageRemaining !== null && (
               <p className="text-xs text-muted">{imageRemaining} of the shared daily app-wide image generations remaining.</p>
@@ -507,7 +731,7 @@ function StudioContent({ business }) {
           <div className="space-y-2">
             <div
               role="img"
-              aria-label={generatedImagePreview ? `AI-generated marketing image for ${business.name}` : "Preview area for your generated marketing image"}
+              aria-label={generatedImagePreview ? `AI-designed marketing poster for ${business.name}` : "Preview area for your marketing poster"}
               className={`relative aspect-square w-full overflow-hidden rounded-xl border border-line bg-canvas bg-center bg-no-repeat ${generatedImagePreview ? "bg-cover" : "bg-contain"}`}
               style={generatedImagePreview ? { backgroundImage: `url("${generatedImagePreview}")` } : undefined}
             >
@@ -517,7 +741,7 @@ function StudioContent({ business }) {
                     <ImagePlus className="h-5 w-5" aria-hidden />
                   </span>
                   <p className="text-sm font-medium">Your image preview</p>
-                  <p className="mt-1 max-w-xs text-xs text-muted">Your generated visual will appear here.</p>
+                  <p className="mt-1 max-w-xs text-xs text-muted">Your finished promotional poster will appear here.</p>
                 </div>
               )}
               {generatedImagePreview && (
@@ -534,8 +758,8 @@ function StudioContent({ business }) {
             </div>
             <p className="text-xs text-muted">
               {generatedImagePreview
-                ? "This image will be attached when you save the post as a draft."
-                : "A square image works well for Instagram and Facebook posts."}
+                ? "This designed poster will be attached when you save the post as a draft."
+                : "Your finished square poster is ready for Instagram and Facebook."}
             </p>
           </div>
         </CardBody>
