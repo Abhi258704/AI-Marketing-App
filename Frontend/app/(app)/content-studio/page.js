@@ -1,8 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, FilePlus2, ImagePlus, RefreshCw, Sparkles, Wand2 } from "lucide-react";
+import { Check, Copy, FilePlus2, RefreshCw, Sparkles, Wand2 } from "lucide-react";
 import { RequireBusiness } from "@/components/layout/require-business";
 import { useBusiness } from "@/components/providers/business-provider";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -13,12 +12,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Checkbox, Field, Input, Select, Textarea } from "@/components/ui/form";
 import { Alert, Skeleton } from "@/components/ui/feedback";
 import { ConfirmDialog } from "@/components/ui/dialog";
-import {
-  generateContent,
-  generateMarketingImage,
-  deleteGeneratedImage,
-} from "@/lib/api/ai";
-import { API_BASE_URL } from "@/lib/config";
+import { generateContent } from "@/lib/api/ai";
 import { createPost } from "@/lib/api/posts";
 import { getContentStudioDraft, saveContentStudioDraft } from "@/lib/local-store";
 import { getErrorMessage } from "@/lib/api/client";
@@ -39,7 +33,6 @@ const GOALS = [
   "Get bookings",
 ];
 const TONES = ["Engaging", "Friendly", "Professional", "Playful", "Inspirational", "Luxurious", "Informative", "Urgent"];
-const IMAGE_ASPECT_RATIOS = ["1:1", "4:5", "9:16", "16:9", "4:3", "3:4"];
 
 const parseHashtags = (text) =>
   [...new Set(
@@ -99,13 +92,6 @@ function StudioContent({ business }) {
   const [hashtagText, setHashtagText] = useState("");
   const [includeCta, setIncludeCta] = useState(true);
   const [includeHashtags, setIncludeHashtags] = useState(true);
-
-  const [visualPrompt, setVisualPrompt] = useState("");
-  const [imageAspectRatio, setImageAspectRatio] = useState("1:1");
-  const [generatedImageUrl, setGeneratedImageUrl] = useState("");
-  const [generatedImageAspectRatio, setGeneratedImageAspectRatio] = useState("1:1");
-  const [imageGenerating, setImageGenerating] = useState(false);
-  const [imageError, setImageError] = useState(null);
   // The request that produced the current result (so the preview label can't drift from it).
   const [producedFor, setProducedFor] = useState(null);
 
@@ -161,19 +147,6 @@ function StudioContent({ business }) {
         );
         setIncludeCta(typeof draft.includeCta === "boolean" ? draft.includeCta : true);
         setIncludeHashtags(typeof draft.includeHashtags === "boolean" ? draft.includeHashtags : true);
-        setVisualPrompt(typeof draft.visualPrompt === "string" ? draft.visualPrompt : "");
-        setImageAspectRatio(IMAGE_ASPECT_RATIOS.includes(draft.imageAspectRatio) ? draft.imageAspectRatio : "1:1");
-        const expectedImagePrefix = `/temp/${userId}/${business._id}/`;
-        setGeneratedImageUrl(
-          typeof draft.generatedImageUrl === "string" && draft.generatedImageUrl.startsWith(expectedImagePrefix)
-            ? draft.generatedImageUrl
-            : ""
-        );
-        setGeneratedImageAspectRatio(
-          IMAGE_ASPECT_RATIOS.includes(draft.generatedImageAspectRatio)
-            ? draft.generatedImageAspectRatio
-            : "1:1"
-        );
         setProducedFor(storedProducedFor);
         setSavedPost(draft.savedPost && typeof draft.savedPost._id === "string" ? draft.savedPost : null);
         setRestoredDraft(Boolean(storedOriginal || draft.caption || draft.topic || draft.savedPost));
@@ -202,10 +175,6 @@ function StudioContent({ business }) {
       hashtagText,
       includeCta,
       includeHashtags,
-      visualPrompt,
-      imageAspectRatio,
-      generatedImageUrl,
-      generatedImageAspectRatio,
       producedFor,
       savedPost,
     });
@@ -224,10 +193,6 @@ function StudioContent({ business }) {
     hashtagText,
     includeCta,
     includeHashtags,
-    visualPrompt,
-    imageAspectRatio,
-    generatedImageUrl,
-    generatedImageAspectRatio,
     producedFor,
     savedPost,
   ]);
@@ -252,9 +217,6 @@ function StudioContent({ business }) {
     }
     setTopicError(null);
     setGenError(null);
-    // A saved draft already owns its staged image. Do not reuse that same temporary
-    // file reference in a second draft when generating a new caption.
-    if (savedPost && generatedImageUrl) setGeneratedImageUrl("");
     setSavedPost(null);
     setGenerating(true);
     const id = ++requestId.current;
@@ -281,49 +243,6 @@ function StudioContent({ business }) {
     }
   }
 
-  async function generateImageAsset() {
-    if (!topic.trim()) {
-      setImageError("Describe the campaign topic before generating an image.");
-      return;
-    }
-
-    setImageError(null);
-    setImageGenerating(true);
-    const previousImageUrl = generatedImageUrl;
-    const previousImageBelongsToSavedPost = Boolean(savedPost);
-
-    try {
-      const result = await generateMarketingImage({
-        businessId: business._id,
-        platform: platformLabel(platform),
-        topic: topic.trim(),
-        caption: finalText || caption,
-        visualPrompt: visualPrompt.trim(),
-        aspectRatio: imageAspectRatio,
-      });
-
-      if (!result.mediaUrl || !result.mediaUrl.startsWith(`/temp/${userId}/${business._id}/`)) {
-        throw new Error("The server returned an invalid image reference. Please try again.");
-      }
-
-      setGeneratedImageUrl(result.mediaUrl);
-      setGeneratedImageAspectRatio(imageAspectRatio);
-      setSavedPost(null);
-
-      // Only delete a replaced image when no saved post references it.
-      if (previousImageUrl && !previousImageBelongsToSavedPost) {
-        await deleteGeneratedImage({
-          businessId: business._id,
-          mediaUrl: previousImageUrl,
-        }).catch(() => {});
-      }
-    } catch (e) {
-      setImageError(getErrorMessage(e, "Couldn't generate an image."));
-    } finally {
-      setImageGenerating(false);
-    }
-  }
-
   function regenerate() {
     if (dirty) setConfirmRegen(true);
     else generate();
@@ -337,15 +256,11 @@ function StudioContent({ business }) {
         businessId: business._id,
         title: topic.trim().slice(0, 100) || null,
         content: finalText,
-        mediaUrls: generatedImageUrl ? [generatedImageUrl] : [],
+        mediaUrls: [],
         platforms: [producedFor?.platform || platform],
       });
       setSavedPost(post);
-      toast.success("Saved as a draft", {
-        message: generatedImageUrl
-          ? "Your AI-generated image was attached to the draft."
-          : "Open the draft to upload images and schedule it.",
-      });
+      toast.success("Saved as a draft", { message: "Open the draft to upload images and schedule it." });
     } catch (e) {
       toast.error("Couldn't save the draft", { message: getErrorMessage(e) });
     } finally {
@@ -355,7 +270,6 @@ function StudioContent({ business }) {
 
   const targetPlatform = producedFor?.platform || platform;
   const overLimit = targetPlatform === "instagram" && (finalText.length > INSTAGRAM_CAPTION_LIMIT || hashtags.length > INSTAGRAM_HASHTAG_LIMIT);
-  const generatedImagePreview = generatedImageUrl ? `${API_BASE_URL}${generatedImageUrl}` : null;
 
   return (
     <>
@@ -489,22 +403,15 @@ function StudioContent({ business }) {
                     {finalText.length} characters
                     {targetPlatform === "instagram" && ` · limit ${INSTAGRAM_CAPTION_LIMIT} characters and ${INSTAGRAM_HASHTAG_LIMIT} hashtags`}
                   </p>
-                  {targetPlatform === "instagram" && !generatedImageUrl && (
-                    <Alert tone="info">Instagram posts need an image. Generate one below or upload an image after opening the draft.</Alert>
-                  )}
-                  {generatedImageUrl && (
-                    <Alert tone="success">
-                      This AI-generated image will be attached to your draft. It stays in temporary storage until you schedule or publish the post.
-                    </Alert>
+                  {targetPlatform === "instagram" && (
+                    <Alert tone="info">Instagram posts need an image URL. Add one on the post page after saving the draft.</Alert>
                   )}
 
                   {savedPost ? (
                     <Alert tone="success" title="Draft saved">
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <ButtonLink size="sm" href={`/posts/${savedPost._id}`}>{generatedImageUrl ? "Open draft" : "Open draft & upload media"}</ButtonLink>
-                        {!generatedImageUrl && (
-                          <Button size="sm" variant="secondary" onClick={() => setSavedPost(null)}>Save another copy</Button>
-                        )}
+                        <ButtonLink size="sm" href={`/posts/${savedPost._id}`}>Open draft &amp; upload media</ButtonLink>
+                        <Button size="sm" variant="secondary" onClick={() => setSavedPost(null)}>Save another copy</Button>
                       </div>
                     </Alert>
                   ) : (
@@ -521,71 +428,6 @@ function StudioContent({ business }) {
           )}
         </div>
       </div>
-
-      <Card className="mt-6">
-        <CardHeader
-          title="AI image generator"
-          description="Create an original marketing image for this business and campaign. The image can be attached to your next saved post draft."
-        />
-        <CardBody className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
-          <div className="space-y-4">
-            <Textarea
-              label="Visual direction (optional)"
-              rows={4}
-              value={visualPrompt}
-              onChange={(e) => setVisualPrompt(e.target.value)}
-              maxLength={600}
-              hint="Describe the scene, style, colors, products or mood. The business and campaign topic are included automatically."
-              placeholder="e.g. Premium editorial food photography, warm natural light, rustic wooden table, appetizing close-up."
-            />
-            <Select
-              label="Image format"
-              value={imageAspectRatio}
-              onChange={(e) => setImageAspectRatio(e.target.value)}
-            >
-              {IMAGE_ASPECT_RATIOS.map((ratio) => (
-                <option key={ratio} value={ratio}>{ratio}</option>
-              ))}
-            </Select>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={generateImageAsset} loading={imageGenerating} disabled={imageGenerating || !topic.trim()}>
-                <ImagePlus className="h-4 w-4" aria-hidden /> Generate AI image
-              </Button>
-              <p className="text-xs text-muted">Uses Gemini image generation. API usage may incur charges.</p>
-            </div>
-            {imageError && <Alert tone="danger" title="Image generation failed">{imageError}</Alert>}
-          </div>
-
-          <div className="space-y-2">
-            {generatedImagePreview ? (
-              <>
-                <div
-                  className="relative w-full overflow-hidden rounded-xl bg-canvas"
-                  style={{ aspectRatio: generatedImageAspectRatio.replace(":", " / ") }}
-                >
-                  <Image
-                    src={generatedImagePreview}
-                    alt={`AI-generated marketing image for ${business.name}`}
-                    fill
-                    unoptimized
-                    sizes="(max-width: 1024px) 100vw, 40vw"
-                    className="object-contain"
-                  />
-                </div>
-                <p className="text-xs text-muted">Generated image · {generatedImageAspectRatio}</p>
-              </>
-            ) : (
-              <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-line-strong bg-canvas p-6 text-center">
-                <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700">
-                  <ImagePlus className="h-5 w-5" aria-hidden />
-                </span>
-                <p className="text-sm font-medium">Your generated image will appear here</p>
-                <p className="mt-1 max-w-xs text-xs text-muted">Add a campaign topic on the left, choose a visual direction, then generate.</p>
-              </div>
-            )}
-          </div>
-        </CardBody>
-      </Card>
 
       <ConfirmDialog
         open={confirmRegen}
