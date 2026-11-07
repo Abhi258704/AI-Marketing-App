@@ -112,6 +112,7 @@ function StudioContent({ business }) {
   const [restoredDraft, setRestoredDraft] = useState(false);
   const [hydratedScope, setHydratedScope] = useState(null);
   const requestId = useRef(0);
+  const imageRequestId = useRef(0);
 
   // Restore the last working copy for this signed-in user and selected business.
   // The scope guard prevents default state from overwriting storage before restoration.
@@ -238,6 +239,7 @@ function StudioContent({ business }) {
       !keepStagedImage && generatedImageUrl && !savedPost ? generatedImageUrl : null;
 
     requestId.current += 1;
+    imageRequestId.current += 1;
     setPlatform("instagram");
     setTopic("");
     setGoal(GOALS[0]);
@@ -309,6 +311,7 @@ function StudioContent({ business }) {
 
     setImageError(null);
     setImageGenerating(true);
+    const imageId = ++imageRequestId.current;
     const previousImageUrl = generatedImageUrl;
     const previousImageBelongsToSavedPost = Boolean(savedPost);
 
@@ -325,6 +328,11 @@ function StudioContent({ business }) {
         throw new Error("The server returned an invalid image reference. Please try again.");
       }
 
+      if (imageId !== imageRequestId.current) {
+        await deleteGeneratedImage({ businessId: business._id, mediaUrl: result.mediaUrl }).catch(() => {});
+        return;
+      }
+
       setGeneratedImageUrl(result.mediaUrl);
       setImageRemaining(
         Number.isInteger(result.remainingToday) ? result.remainingToday : null
@@ -338,9 +346,11 @@ function StudioContent({ business }) {
         }).catch(() => {});
       }
     } catch (e) {
-      setImageError(getErrorMessage(e, "Couldn't generate an image."));
+      if (imageId === imageRequestId.current) {
+        setImageError(getErrorMessage(e, "Couldn't generate an image."));
+      }
     } finally {
-      setImageGenerating(false);
+      if (imageId === imageRequestId.current) setImageGenerating(false);
     }
   }
 
@@ -452,7 +462,7 @@ function StudioContent({ business }) {
                   type="button"
                   variant="secondary"
                   onClick={() => resetFields()}
-                  disabled={generating || saving || imageGenerating}
+                  disabled={generating || saving}
                   title="Clear all Content Studio fields"
                 >
                   <RotateCcw className="h-4 w-4" aria-hidden />
