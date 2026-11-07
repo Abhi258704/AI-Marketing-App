@@ -42,7 +42,11 @@ function connectionState(account) {
 function PlatformCard({ platform, accounts, business, pending, onStart, keeping, onKeep }) {
   const cfg = PLATFORM_CONFIG[platform];
   const Icon = cfg.icon;
-  const list = accounts.filter((a) => a.platform === platform);
+  // Keep disconnected Instagram records in storage for publication history, but
+  // don't present them as duplicate active accounts in the connection UI.
+  const list = accounts.filter(
+    (a) => a.platform === platform && (platform !== "instagram" || a.status !== "disconnected")
+  );
   // Prefer a connected account for the headline status.
   const primary = list.find((a) => a.status === "connected") || list[0];
   const state = connectionState(primary);
