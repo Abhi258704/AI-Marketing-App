@@ -85,7 +85,7 @@ function wrapCanvasText(ctx, text, maxWidth, maxLines) {
   }
 
   if (line && lines.length < maxLines) lines.push(line);
-  const usedWords = lines.join(" ").split(/\\s+/).filter(Boolean).length;
+  const usedWords = lines.join(" ").split(/\s+/).filter(Boolean).length;
   if (usedWords < words.length && lines.length) {
     let last = lines.length - 1;
     let shortened = lines[last];
