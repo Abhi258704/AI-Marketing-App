@@ -399,7 +399,13 @@ function StudioContent({ business }) {
 
       {restoredDraft && (
         <Alert tone="info" className="mb-6" title="Your previous work has been restored">
-          Your generated content and edits for {business.name} are back. You can continue editing or save them as a post draft.
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p>Your generated content and edits for {business.name} are back. You can continue editing or save them as a post draft.</p>
+            <Button type="button" variant="secondary" size="sm" onClick={() => resetFields()} disabled={generating || saving}>
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              Reset fields
+            </Button>
+          </div>
         </Alert>
       )}
 
@@ -454,21 +460,9 @@ function StudioContent({ business }) {
                 {TONES.map((t) => <option key={t}>{t}</option>)}
               </Select>
 
-              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-                <Button type="submit" loading={generating} disabled={generating || saving || imageGenerating}>
-                  <Sparkles className="h-4 w-4" aria-hidden /> {original ? "Generate new version" : "Generate content"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => resetFields()}
-                  disabled={generating || saving}
-                  title="Clear all Content Studio fields"
-                >
-                  <RotateCcw className="h-4 w-4" aria-hidden />
-                  Reset fields
-                </Button>
-              </div>
+              <Button type="submit" className="w-full" loading={generating} disabled={generating || saving || imageGenerating}>
+                <Sparkles className="h-4 w-4" aria-hidden /> {original ? "Generate new version" : "Generate content"}
+              </Button>
             </CardBody>
           </Card>
         </form>
