@@ -1,5 +1,6 @@
 import Post from "../models/post.model.js";
 import Business from "../models/business.model.js";
+import { promoteTemporaryMedia, removeTemporaryMedia } from "../services/media-storage.service.js";
 
 
 
@@ -156,6 +157,8 @@ const updatePost = async (req, res) => {
             });
         }
 
+        const previousMediaUrls = [...(post.mediaUrls || [])];
+
         if (title !== undefined) post.title = title;
         if (content !== undefined) post.content = content;
         if (mediaUrls !== undefined) post.mediaUrls = mediaUrls;
@@ -163,6 +166,14 @@ const updatePost = async (req, res) => {
         if (platforms !== undefined) post.platforms = platforms;
 
         await post.save();
+
+        if (mediaUrls !== undefined) {
+            const retained = new Set(mediaUrls);
+            await removeTemporaryMedia(
+                previousMediaUrls.filter((url) => !retained.has(url)),
+                business
+            );
+        }
 
         return res.status(200).json({
             success: true,
@@ -204,6 +215,7 @@ const deletePost = async (req, res) => {
             });
         }
 
+        await removeTemporaryMedia(post.mediaUrls, business);
         await Post.findByIdAndDelete(postId);
 
         return res.status(200).json({
@@ -281,6 +293,16 @@ const schedulePost = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "At least one platform is required",
+            });
+        }
+
+        try {
+            // Scheduling is the final handoff from temporary storage to Cloudinary.
+            await promoteTemporaryMedia(post, business);
+        } catch (error) {
+            return res.status(503).json({
+                success: false,
+                message: error.message || "Could not move staged images to Cloudinary",
             });
         }
 

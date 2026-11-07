@@ -9,6 +9,7 @@ import {
     getInstagramMediaContainerStatus,
 } from "./instagram.service.js";
 import { createNotification } from "./notification.service.js";
+import { promoteTemporaryMedia } from "./media-storage.service.js";
 
 
 
@@ -40,6 +41,22 @@ const processScheduledPosts = async () => {
                 if (!business) {
                     post.status = "failed";
                     await post.save();
+                    continue;
+                }
+
+                try {
+                    await promoteTemporaryMedia(post, business);
+                } catch (error) {
+                    post.status = "failed";
+                    await post.save();
+                    await createNotification({
+                        userId: business.ownerId,
+                        businessId: business._id,
+                        type: "post_failed",
+                        title: "Scheduled post image upload failed",
+                        message: `Your scheduled post "${post.title}" could not move its temporary image to Cloudinary: ${error.message}`,
+                    });
+                    console.error(`Could not promote staged images for post ${post._id}:`, error.message);
                     continue;
                 }
 

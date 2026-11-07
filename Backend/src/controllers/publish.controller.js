@@ -8,6 +8,7 @@ import Business from "../models/business.model.js";
 import SocialAccount from "../models/socialAccount.model.js";
 import PostPublication from "../models/postPublication.model.js";
 import { createFacebookPost } from "../services/facebook.service.js";
+import { promoteTemporaryMedia } from "../services/media-storage.service.js";
 
 
 
@@ -65,6 +66,16 @@ const publishPost = async (req, res) => {
             return res.status(400).json({
                 success: false,
                 message: "No connected social accounts found for the selected platforms",
+            });
+        }
+
+        try {
+            // Publish Now is the final handoff from local staging to permanent media storage.
+            await promoteTemporaryMedia(post, business);
+        } catch (error) {
+            return res.status(503).json({
+                success: false,
+                message: error.message || "Could not move staged images to Cloudinary",
             });
         }
 
