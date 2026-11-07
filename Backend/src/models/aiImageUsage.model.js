@@ -4,7 +4,7 @@ const aiImageUsageSchema = new mongoose.Schema(
     {
         scope: {
             type: String,
-            enum: ["global", "user"],
+            enum: ["global"],
             required: true,
         },
         scopeId: {
