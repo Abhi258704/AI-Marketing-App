@@ -9,6 +9,7 @@ import {
   Link2,
   ListChecks,
   MessageSquareText,
+  QrCode,
   Settings,
   Sparkles,
 } from "lucide-react";
@@ -38,6 +39,7 @@ export const NAV_GROUPS = [
     label: "Manage",
     items: [
       { href: "/businesses", label: "Businesses", icon: Building2 },
+      { href: "/qr-codes", label: "Feedback QR codes", icon: QrCode },
       { href: "/social-accounts", label: "Social accounts", icon: Link2 },
       { href: "/reviews", label: "Review moderation", icon: MessageSquareText },
       { href: "/notifications", label: "Notifications", icon: Bell },
