@@ -108,8 +108,12 @@ function StudioContent({ business }) {
 
   useEffect(() => {
     if (!draftScope) return;
+    let cancelled = false;
 
-    const draft = getContentStudioDraft(userId, business._id);
+    Promise.resolve().then(() => {
+      if (cancelled) return;
+
+      const draft = getContentStudioDraft(userId, business._id);
     if (draft && typeof draft === "object") {
       const storedOriginal =
         draft.original && typeof draft.original.caption === "string"
@@ -148,7 +152,12 @@ function StudioContent({ business }) {
       setRestoredDraft(Boolean(storedOriginal || draft.caption || draft.topic || draft.savedPost));
     }
 
-    setHydratedScope(draftScope);
+      setHydratedScope(draftScope);
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [draftScope, userId, business._id, business.name]);
 
   // Keep the working copy current as the user edits, without creating a backend Post.
