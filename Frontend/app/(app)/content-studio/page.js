@@ -607,7 +607,7 @@ function StudioContent({ business }) {
         </Alert>
       )}
 
-      <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-[minmax(18rem,0.85fr)_minmax(0,1.15fr)]">
         <form
           onSubmit={(e) => { e.preventDefault(); generate(); }}
           noValidate
@@ -676,7 +676,7 @@ function StudioContent({ business }) {
             </span>
           }
         />
-        <CardBody className="grid gap-6">
+        <CardBody className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)]">
           <div className="flex min-w-0 flex-col gap-4">
             <div className="space-y-3">
               <Textarea
@@ -728,7 +728,7 @@ function StudioContent({ business }) {
             {imageError && <Alert tone="danger" title="Image generation failed">{imageError}</Alert>}
           </div>
 
-          <div className="mx-auto w-full max-w-[34rem] space-y-2">
+          <div className="w-full space-y-2">
             <div
               role="img"
               aria-label={generatedImagePreview ? `AI-designed marketing poster for ${business.name}` : "Preview area for your marketing poster"}
