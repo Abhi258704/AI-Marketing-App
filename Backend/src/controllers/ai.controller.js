@@ -323,7 +323,10 @@ const generateImage = async (req, res) => {
         const status = Number(error.status || 0);
         console.error("AI image generation error:", error.message || error);
 
-        if (status === 429) {
+        if (
+            status === 429 ||
+            /quota|neuron|daily limit|rate.?limit|capacity/i.test(error.message || "")
+        ) {
             return res.status(429).json({
                 success: false,
                 message: "Cloudflare's free daily AI allowance or temporary rate limit has been reached. Please try again later.",

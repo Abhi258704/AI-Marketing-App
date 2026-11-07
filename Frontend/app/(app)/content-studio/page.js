@@ -488,7 +488,9 @@ function StudioContent({ business }) {
                     <Alert tone="success" title="Draft saved">
                       <div className="mt-2 flex flex-wrap gap-2">
                         <ButtonLink size="sm" href={`/posts/${savedPost._id}`}>{generatedImageUrl ? "Open draft" : "Open draft & upload media"}</ButtonLink>
-                        <Button size="sm" variant="secondary" onClick={() => setSavedPost(null)}>Save another copy</Button>
+                        {!generatedImageUrl && (
+                          <Button size="sm" variant="secondary" onClick={() => setSavedPost(null)}>Save another copy</Button>
+                        )}
                       </div>
                     </Alert>
                   ) : (
@@ -526,7 +528,7 @@ function StudioContent({ business }) {
               <Button onClick={generateImageAsset} loading={imageGenerating} disabled={imageGenerating || !topic.trim()}>
                 <ImagePlus className="h-4 w-4" aria-hidden /> Generate AI image
               </Button>
-              <p className="text-xs text-muted">Square image · FLUX.1 Schnell · 4-step generation</p>
+              <p className="text-xs text-muted">Square image · FLUX.1 Schnell · free daily limits apply</p>
             </div>
             {imageRemaining !== null && (
               <p className="text-xs text-muted">{imageRemaining} of your daily image generations remaining.</p>
