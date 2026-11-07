@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, FilePlus2, RefreshCw, Sparkles, Wand2 } from "lucide-react";
 import { RequireBusiness } from "@/components/layout/require-business";
 import { useBusiness } from "@/components/providers/business-provider";
+import { useAuth } from "@/components/providers/auth-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { PlatformBadges } from "@/components/posts/post-badges";
 import { Card, CardBody, CardHeader, PageHeader } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { Alert, Skeleton } from "@/components/ui/feedback";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { generateContent } from "@/lib/api/ai";
 import { createPost } from "@/lib/api/posts";
+import { getContentStudioDraft, saveContentStudioDraft } from "@/lib/local-store";
 import { getErrorMessage } from "@/lib/api/client";
 import {
   INSTAGRAM_CAPTION_LIMIT,
@@ -72,6 +74,8 @@ function CopyButton({ text, label, disabled }) {
 
 function StudioContent({ business }) {
   const toast = useToast();
+  const { user } = useAuth();
+  const userId = user?.id;
   const { businesses, selectBusiness } = useBusiness();
 
   const [platform, setPlatform] = useState("instagram");
@@ -94,7 +98,95 @@ function StudioContent({ business }) {
   const [saving, setSaving] = useState(false);
   const [savedPost, setSavedPost] = useState(null);
   const [confirmRegen, setConfirmRegen] = useState(false);
+  const [restoredDraft, setRestoredDraft] = useState(false);
+  const [hydratedScope, setHydratedScope] = useState(null);
   const requestId = useRef(0);
+
+  // Restore the last working copy for this signed-in user and selected business.
+  // The scope guard prevents default state from overwriting storage before restoration.
+  const draftScope = userId && business._id ? `${userId}:${business._id}` : null;
+
+  useEffect(() => {
+    if (!draftScope) return;
+
+    const draft = getContentStudioDraft(userId, business._id);
+    if (draft && typeof draft === "object") {
+      const storedOriginal =
+        draft.original && typeof draft.original.caption === "string"
+          ? {
+              caption: draft.original.caption,
+              callToAction: typeof draft.original.callToAction === "string" ? draft.original.callToAction : "",
+              hashtags: Array.isArray(draft.original.hashtags)
+                ? draft.original.hashtags.filter((item) => typeof item === "string")
+                : [],
+            }
+          : null;
+      const storedProducedFor =
+        draft.producedFor && PLATFORMS.some((item) => item.id === draft.producedFor.platform)
+          ? {
+              platform: draft.producedFor.platform,
+              businessName: typeof draft.producedFor.businessName === "string"
+                ? draft.producedFor.businessName
+                : business.name,
+            }
+          : null;
+
+      setPlatform(PLATFORMS.some((item) => item.id === draft.platform) ? draft.platform : "instagram");
+      setTopic(typeof draft.topic === "string" ? draft.topic : "");
+      setGoal(typeof draft.goal === "string" ? draft.goal : GOALS[0]);
+      setTone(typeof draft.tone === "string" ? draft.tone : TONES[0]);
+      setOriginal(storedOriginal);
+      setCaption(typeof draft.caption === "string" ? draft.caption : storedOriginal?.caption || "");
+      setCta(typeof draft.cta === "string" ? draft.cta : storedOriginal?.callToAction || "");
+      setHashtagText(
+        typeof draft.hashtagText === "string" ? draft.hashtagText : storedOriginal?.hashtags.join(" ") || ""
+      );
+      setIncludeCta(typeof draft.includeCta === "boolean" ? draft.includeCta : true);
+      setIncludeHashtags(typeof draft.includeHashtags === "boolean" ? draft.includeHashtags : true);
+      setProducedFor(storedProducedFor);
+      setSavedPost(draft.savedPost && typeof draft.savedPost._id === "string" ? draft.savedPost : null);
+      setRestoredDraft(Boolean(storedOriginal || draft.caption || draft.topic || draft.savedPost));
+    }
+
+    setHydratedScope(draftScope);
+  }, [draftScope, userId, business._id, business.name]);
+
+  // Keep the working copy current as the user edits, without creating a backend Post.
+  useEffect(() => {
+    if (!draftScope || hydratedScope !== draftScope) return;
+
+    saveContentStudioDraft(userId, business._id, {
+      platform,
+      topic,
+      goal,
+      tone,
+      original,
+      caption,
+      cta,
+      hashtagText,
+      includeCta,
+      includeHashtags,
+      producedFor,
+      savedPost,
+    });
+  }, [
+    draftScope,
+    hydratedScope,
+    userId,
+    business._id,
+    platform,
+    topic,
+    goal,
+    tone,
+    original,
+    caption,
+    cta,
+    hashtagText,
+    includeCta,
+    includeHashtags,
+    producedFor,
+    savedPost,
+  ]);
 
   const hashtags = useMemo(() => parseHashtags(hashtagText), [hashtagText]);
   const finalText = useMemo(
@@ -177,6 +269,12 @@ function StudioContent({ business }) {
         title="Content Studio"
         description="Describe what you want to promote and get a ready-to-edit caption, call to action and hashtags."
       />
+
+      {restoredDraft && (
+        <Alert tone="info" className="mb-6" title="Your previous work has been restored">
+          Your generated content and edits for {business.name} are back. You can continue editing or save them as a post draft.
+        </Alert>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[22rem_minmax(0,1fr)]">
         <form
