@@ -40,15 +40,26 @@ function initialValues(post, defaultBusinessId) {
   };
 }
 
-function MediaPreview({ url }) {
+export function MediaPreview({ url, className = "h-24 w-24" }) {
   const [failed, setFailed] = useState(false);
   if (!url || !isHttpUrl(url)) return null;
   if (failed) {
-    return <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-sunken text-xs text-muted">Can&apos;t preview</div>;
+    return (
+      <div className={"flex " + className + " items-center justify-center rounded-lg bg-sunken px-2 text-center text-xs text-muted"} role="img" aria-label="Image preview unavailable">
+        Preview unavailable
+      </div>
+    );
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element -- arbitrary user-supplied URL
-    <img src={url} alt="Media preview" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="h-24 w-24 rounded-lg border border-line object-cover" />
+    <img
+      src={url}
+      alt="Media preview"
+      loading="lazy"
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+      className={className + " rounded-lg border border-line object-cover"}
+    />
   );
 }
 
@@ -129,19 +140,24 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
     }
 
     const validFiles = candidates.filter((file) => {
-      if (!["image/jpeg", "image/png"].includes(file.type)) {
-        validationMessages.push(`${file.name}: choose a JPG or PNG image.`);
+      const fileType = (file.type || "").toLowerCase();
+      const extension = (file.name || "").split(".").pop().toLowerCase();
+      const supportedType = !fileType || ["image/jpeg", "image/png"].includes(fileType);
+      const supportedExtension = ["jpg", "jpeg", "png"].includes(extension);
+
+      if (!supportedType || !supportedExtension) {
+        validationMessages.push(file.name + ": unsupported format. Choose a JPG or PNG image.");
         return false;
       }
       if (file.size > MAX_POST_IMAGE_SIZE_BYTES) {
-        validationMessages.push(`${file.name}: image must be 8 MB or smaller.`);
+        validationMessages.push(file.name + ": image must be 8 MB or smaller.");
         return false;
       }
       return true;
     });
 
     if (!validFiles.length) {
-      setUploadError(validationMessages.join(" "));
+      setUploadError(validationMessages.join(" ") || "Choose a JPG or PNG image no larger than 8 MB.");
       return;
     }
 
@@ -175,14 +191,14 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
         .map((result) => result.reason?.message || "An image couldn't be uploaded.");
 
       const messages = [...validationMessages, ...failedUploads];
-      if (messages.length) setUploadError(messages.join(" "));
+      setUploadError(messages.join(" "));
     } finally {
       setUploading(false);
     }
   }
 
   function handleFileInputChange(event) {
-    const files = event.currentTarget.files;
+    const files = Array.from(event.currentTarget.files || []);
     event.currentTarget.value = "";
     uploadSelectedFiles(files);
   }
@@ -344,7 +360,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/jpeg,image/png"
+              accept="image/*"
               multiple
               className="sr-only"
               disabled={uploading || Boolean(busy) || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}
@@ -400,6 +416,12 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
                     onChange={(e) => setMedia(i, e.target.value)}
                     error={i === 0 ? errors.mediaUrls : undefined}
                   />
+                  {url.trim() && isHttpUrl(url.trim()) && (
+                    <div className="mt-2 flex items-center gap-3">
+                      <MediaPreview key={url} url={url.trim()} />
+                      <span className="text-xs text-muted">Image {i + 1} preview</span>
+                    </div>
+                  )}
                 </div>
                 <Button variant="ghost" size="sm" className="mt-1" onClick={() => removeMedia(i)} aria-label={`Remove media URL ${i + 1}`} disabled={uploading || Boolean(busy)}>
                   <Trash2 className="h-4 w-4" aria-hidden />
@@ -464,7 +486,15 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
           <CardHeader title="Preview" />
           <CardBody className="space-y-3">
             <PlatformBadges platforms={values.platforms} />
-            {mediaList[0] && <MediaPreview url={mediaList[0]} />}
+            {mediaList.length > 0 ? (
+              <div className="grid grid-cols-2 gap-2">
+                {mediaList.slice(0, 4).map((url, index) => (
+                  <MediaPreview key={url + "-" + index} url={url} className="h-28 w-full" />
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted">Add an image to see its preview here.</p>
+            )}
             {values.content.trim() ? (
               <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{values.content}</p>
             ) : (

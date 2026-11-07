@@ -3,11 +3,11 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CalendarClock, CalendarX2, Pencil, RefreshCw, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, CalendarClock, CalendarX2, CloudUpload, Pencil, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useBusiness } from "@/components/providers/business-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { PostForm } from "@/components/posts/post-form";
+import { MediaPreview, PostForm } from "@/components/posts/post-form";
 import { PlatformBadges, PostStatusBadge } from "@/components/posts/post-badges";
 import { PublicationList, PublishOutcome } from "@/components/posts/publication-results";
 import { usePublicationRecords } from "@/components/posts/use-publication-record";
@@ -197,12 +197,38 @@ export default function PostDetailPage({ params }) {
             <CardHeader title="Content" />
             <CardBody className="space-y-4">
               <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{post.content}</p>
-              {post.mediaUrls?.length > 0 && (
-                <ul className="space-y-1.5 border-t border-line pt-4 text-sm">
-                  {post.mediaUrls.map((u) => (
-                    <li key={u} className="truncate"><a href={u} target="_blank" rel="noopener noreferrer" className="text-brand-700 hover:underline">{u}</a></li>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Media"
+              description="Images attached to this post."
+              action={canEditPost(post) && (
+                <Button size="sm" variant="secondary" onClick={() => setEditing(true)}>
+                  <CloudUpload className="h-4 w-4" aria-hidden />
+                  {post.mediaUrls?.length ? "Manage media" : "Upload media"}
+                </Button>
+              )}
+            />
+            <CardBody>
+              {post.mediaUrls?.length > 0 ? (
+                <div className="flex flex-wrap gap-4">
+                  {post.mediaUrls.map((url, index) => (
+                    <div key={url + "-" + index} className="space-y-1.5">
+                      <MediaPreview url={url} className="h-28 w-28" />
+                      <a href={url} target="_blank" rel="noopener noreferrer" className="block max-w-28 truncate text-xs text-brand-700 hover:underline">
+                        Open image
+                      </a>
+                    </div>
                   ))}
-                </ul>
+                </div>
+              ) : (
+                <p className="text-sm text-muted">
+                  {canEditPost(post)
+                    ? "No images added yet. Upload a JPG or PNG image to complete this post."
+                    : "No images attached to this post."}
+                </p>
               )}
             </CardBody>
           </Card>

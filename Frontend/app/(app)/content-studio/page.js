@@ -260,7 +260,7 @@ function StudioContent({ business }) {
         platforms: [producedFor?.platform || platform],
       });
       setSavedPost(post);
-      toast.success("Saved as a draft", { message: "Add an image and schedule it from the post page." });
+      toast.success("Saved as a draft", { message: "Open the draft to upload images and schedule it." });
     } catch (e) {
       toast.error("Couldn't save the draft", { message: getErrorMessage(e) });
     } finally {
@@ -410,7 +410,7 @@ function StudioContent({ business }) {
                   {savedPost ? (
                     <Alert tone="success" title="Draft saved">
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <ButtonLink size="sm" href={`/posts/${savedPost._id}`}>Open draft to add media &amp; schedule</ButtonLink>
+                        <ButtonLink size="sm" href={`/posts/${savedPost._id}`}>Open draft &amp; upload media</ButtonLink>
                         <Button size="sm" variant="secondary" onClick={() => setSavedPost(null)}>Save another copy</Button>
                       </div>
                     </Alert>
