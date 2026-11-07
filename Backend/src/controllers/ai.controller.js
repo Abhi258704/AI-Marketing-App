@@ -141,10 +141,6 @@ const IMAGE_DAILY_GLOBAL_LIMIT = Math.max(
     1,
     Number.parseInt(process.env.CLOUDFLARE_IMAGE_DAILY_GLOBAL_LIMIT || "100", 10) || 100
 );
-const IMAGE_DAILY_USER_LIMIT = Math.max(
-    1,
-    Number.parseInt(process.env.CLOUDFLARE_IMAGE_DAILY_USER_LIMIT || "3", 10) || 3
-);
 
 const getUtcDayKey = () => new Date().toISOString().slice(0, 10);
 
@@ -177,16 +173,8 @@ async function reserveImageUsage(scope, scopeId, dayKey, limit) {
     );
 }
 
-async function releaseImageUsage(scope, scopeId, dayKey) {
-    await AiImageUsage.updateOne(
-        { scope, scopeId, dayKey, count: { $gt: 0 } },
-        { $inc: { count: -1 } }
-    );
-}
-
 const generateImage = async (req, res) => {
     const dayKey = getUtcDayKey();
-    const userId = String(req.user._id);
 
     try {
         const {
@@ -271,22 +259,6 @@ const generateImage = async (req, res) => {
             });
         }
 
-        const userUsage = await reserveImageUsage(
-            "user",
-            userId,
-            dayKey,
-            IMAGE_DAILY_USER_LIMIT
-        );
-
-        if (!userUsage) {
-            await releaseImageUsage("global", "all-users", dayKey);
-            return res.status(429).json({
-                success: false,
-                code: "USER_DAILY_IMAGE_LIMIT",
-                message: `You have reached your ${IMAGE_DAILY_USER_LIMIT}-image daily limit. Please try again after 00:00 UTC.`,
-            });
-        }
-
         const promptParts = [
             "Create one original, polished commercial marketing image for a small business social media campaign.",
             "Make the composition square and suitable for a social media feed.",
@@ -316,8 +288,8 @@ const generateImage = async (req, res) => {
             mediaUrl,
             mimeType: generated.mimeType,
             model: generated.model,
-            remainingToday: Math.max(0, IMAGE_DAILY_USER_LIMIT - userUsage.count),
-            dailyLimit: IMAGE_DAILY_USER_LIMIT,
+            remainingToday: Math.max(0, IMAGE_DAILY_GLOBAL_LIMIT - globalUsage.count),
+            dailyLimit: IMAGE_DAILY_GLOBAL_LIMIT,
         });
     } catch (error) {
         const status = Number(error.status || 0);
