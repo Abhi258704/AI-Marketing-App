@@ -496,7 +496,7 @@ function StudioContent({ business }) {
               <span className="text-xs text-muted">Square format · FLUX.1 Schnell</span>
             </div>
             {imageRemaining !== null && (
-              <p className="text-xs text-muted">{imageRemaining} of your daily image generations remaining.</p>
+              <p className="text-xs text-muted">{imageRemaining} of the shared daily app-wide image generations remaining.</p>
             )}
             {!topic.trim() && (
               <p className="text-xs text-muted">Add a campaign topic in the setup panel to enable image generation.</p>
