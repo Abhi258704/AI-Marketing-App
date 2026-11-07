@@ -45,6 +45,15 @@ export function saveContentStudioDraft(userId, businessId, draft) {
   });
 }
 
+export function clearContentStudioDraft(userId, businessId) {
+  if (!userId || !businessId) return;
+  try {
+    window.localStorage.removeItem(k(userId, "contentStudioDraft", businessId));
+  } catch {
+    /* ignore unavailable storage */
+  }
+}
+
 
 // ---- Publication results per post ----
 export const getPublicationRecord = (userId, postId) =>
