@@ -29,6 +29,11 @@ export default function FeedbackPage() {
       return;
     }
 
+    if (!publicDisplayConsent) {
+      setError("Please agree to public testimonial display before submitting your feedback.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await submitFeedback({
@@ -60,8 +65,8 @@ export default function FeedbackPage() {
               <CheckCircle2 className="mx-auto h-12 w-12 text-brand-700" aria-hidden />
               <h1 className="mt-4 text-2xl font-semibold">Thank you for your feedback</h1>
               <p className="mt-2 text-sm leading-6 text-muted">
-                Your feedback has been sent to the business for review. If approved and you gave permission,
-                it may appear publicly as a testimonial on this platform.
+                Your feedback has been sent to the business for review. If approved, it may appear publicly
+                as a testimonial on this platform.
               </p>
             </div>
           ) : (
@@ -148,13 +153,15 @@ export default function FeedbackPage() {
                 <label className="flex items-start gap-3 rounded-lg border border-line bg-canvas p-3 text-sm">
                   <input
                     type="checkbox"
+                    required
                     checked={publicDisplayConsent}
                     onChange={(event) => setPublicDisplayConsent(event.target.checked)}
                     className="mt-0.5 h-4 w-4 accent-brand-700"
                   />
                   <span>
-                    I agree that my name, rating and feedback may be displayed publicly as a testimonial
-                    on this platform if the business approves it. My email address will not be displayed.
+                    <strong>Required:</strong> I agree that my name, rating and feedback may be displayed
+                    publicly as a testimonial on this platform if the business approves it. My email
+                    address will not be displayed.
                   </span>
                 </label>
 
