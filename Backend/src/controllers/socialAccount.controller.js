@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import SocialAccount from "../models/socialAccount.model.js";
 import Business from "../models/business.model.js";
 import axios from "axios";
