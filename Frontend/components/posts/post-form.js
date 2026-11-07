@@ -179,10 +179,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
             mediaUrls: [...currentMedia, ...uploadedUrls.slice(0, remainingSlots)],
           };
         });
-        toast.success(
-          uploadedUrls.length === 1 ? "Image uploaded" : `${uploadedUrls.length} images uploaded`,
-          { message: "Images are saved in Backend/public/temp. They move to Cloudinary when you publish or schedule." }
-        );
+        // Staging is intentionally silent; the thumbnail is the upload confirmation.
       }
 
       const failedUploads = results
