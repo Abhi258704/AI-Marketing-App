@@ -2,6 +2,7 @@ import express from "express";
 import {
     generateContent,
     generateImage,
+    saveGeneratedPoster,
     deleteGeneratedImage,
 } from "../controllers/ai.controller.js";
 import authMiddleware from "../middleware/auth.middleware.js";
@@ -20,6 +21,12 @@ router.post(
     "/generate-image",
     authMiddleware,
     generateImage
+);
+
+router.post(
+    "/save-poster",
+    authMiddleware,
+    saveGeneratedPoster
 );
 
 router.delete(
