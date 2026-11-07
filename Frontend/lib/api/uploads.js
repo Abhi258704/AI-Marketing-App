@@ -27,6 +27,11 @@ export async function uploadPostImage(file, businessId) {
     throw new Error("The server returned incomplete Cloudinary upload credentials.");
   }
 
+  const serverFileLimit = Number(signed.maxFileSizeBytes) || MAX_POST_IMAGE_SIZE_BYTES;
+  if (file.size > serverFileLimit) {
+    throw new Error(`Each image must be ${(serverFileLimit / (1024 * 1024)).toFixed(0)} MB or smaller.`);
+  }
+
   const formData = new FormData();
   formData.append("file", file);
   formData.append("api_key", signed.apiKey);

@@ -373,7 +373,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
               }}
               onDragLeave={() => setDraggingFiles(false)}
               onDrop={handleFileDrop}
-              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-8 text-center transition-colors ${draggingFiles ? "border-brand-600 bg-brand-50" : "border-line-strong bg-canvas hover:border-brand-500"} ${uploading || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS ? "cursor-not-allowed opacity-60" : ""}`}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-8 text-center transition-colors ${draggingFiles ? "border-brand-600 bg-brand-50" : "border-line-strong bg-canvas hover:border-brand-500"} ${uploading || busy || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS ? "cursor-not-allowed opacity-60" : ""}`}
             >
               <CloudUpload className="mb-2 h-7 w-7 text-brand-700" aria-hidden />
               <p className="text-sm font-semibold">Drag images here or browse files</p>
