@@ -7,6 +7,7 @@ import SocialAccount from "../models/socialAccount.model.js";
 import PostPublication from "../models/postPublication.model.js";
 import Post from "../models/post.model.js";
 import Business from "../models/business.model.js";
+import { promoteTemporaryMedia } from "../services/media-storage.service.js";
 
 
 
@@ -192,6 +193,12 @@ const publishFacebookPost = async (req, res) => {
                 success: false,
                 message: "You do not have access to this business",
             });
+        }
+
+        try {
+            await promoteTemporaryMedia(post, business);
+        } catch (error) {
+            return res.status(503).json({ success: false, message: error.message });
         }
 
         // 6. Get connected Facebook account

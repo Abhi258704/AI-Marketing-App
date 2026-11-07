@@ -52,11 +52,12 @@ function messageFromBody(data, status) {
  */
 export async function apiFetch(
   path,
-  { method = "GET", body, query, auth = true, signal } = {}
+  { method = "GET", body, rawBody, contentType, query, auth = true, signal } = {}
 ) {
   const headers = { Accept: "application/json" };
 
   if (body !== undefined) headers["Content-Type"] = "application/json";
+  else if (rawBody !== undefined && contentType) headers["Content-Type"] = contentType;
 
   if (auth) {
     const token = getToken();
@@ -72,7 +73,7 @@ export async function apiFetch(
     response = await fetch(buildUrl(path, query), {
       method,
       headers,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: body !== undefined ? JSON.stringify(body) : rawBody,
       signal,
     });
   } catch (error) {

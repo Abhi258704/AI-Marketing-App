@@ -1,4 +1,4 @@
-// Small, namespaced browser cache for data the backend cannot return later.
+// Small, namespaced browser cache for user-scoped UI state and data the backend cannot return later.
 //
 // Why this exists: the API currently has no endpoint to list a post's publications or a
 // business's past audits. Results returned by *your own* publish / audit requests are
@@ -30,6 +30,30 @@ const k = (userId, ...parts) => [PREFIX, userId, ...parts].join(":");
 // ---- Active business (per user) ----
 export const getActiveBusinessId = (userId) => read(k(userId, "activeBusiness"), null);
 export const setActiveBusinessId = (userId, id) => write(k(userId, "activeBusiness"), id);
+
+// ---- Content Studio working draft per user + business ----
+// This is an editable browser-side working copy. It does not create a Post record;
+// the user still chooses when to save a real post draft to the backend.
+export const getContentStudioDraft = (userId, businessId) =>
+  userId && businessId ? read(k(userId, "contentStudioDraft", businessId), null) : null;
+
+export function saveContentStudioDraft(userId, businessId, draft) {
+  if (!userId || !businessId || !draft || typeof draft !== "object") return;
+  write(k(userId, "contentStudioDraft", businessId), {
+    ...draft,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export function clearContentStudioDraft(userId, businessId) {
+  if (!userId || !businessId) return;
+  try {
+    window.localStorage.removeItem(k(userId, "contentStudioDraft", businessId));
+  } catch {
+    /* ignore unavailable storage */
+  }
+}
+
 
 // ---- Publication results per post ----
 export const getPublicationRecord = (userId, postId) =>

@@ -142,3 +142,7 @@ dist
 .svelte-kit
 
 # End of https://www.toptal.com/developers/gitignore/api/node
+
+# Runtime staged user images; only keep the empty directory marker in Git.
+public/temp/*
+!public/temp/.gitkeep

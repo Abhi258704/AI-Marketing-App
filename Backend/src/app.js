@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { TEMP_MEDIA_ROOT } from "./services/media-storage.service.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
@@ -16,13 +17,25 @@ import publishRoutes from "./routes/publish.routes.js";
 import recommendationRoutes from "./routes/recommendation.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
+import reviewRoutes from "./routes/review.routes.js";
+import uploadRoutes from "./routes/upload.routes.js";
 
 dotenv.config();
 
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: "12mb" }));
+
+// Temporary previews are served from Backend/public/temp. Files are promoted to Cloudinary
+// when their draft is scheduled or published.
+app.use("/temp", express.static(TEMP_MEDIA_ROOT, {
+  etag: false,
+  maxAge: 0,
+  setHeaders(response) {
+    response.setHeader("Cache-Control", "no-store");
+  },
+}));
 
 // Health check endpoint for uptime monitoring
 app.get("/health", (_req, res) => {
@@ -68,6 +81,12 @@ app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/notifications", notificationRoutes);
 
 app.use("/api/analytics", analyticsRoutes);
+
+app.use("/api/reviews", reviewRoutes);
+
+app.use("/api/uploads", uploadRoutes);
+
+
 
 
 
