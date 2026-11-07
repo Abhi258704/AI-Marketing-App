@@ -360,7 +360,6 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
               multiple
               className="sr-only"
               disabled={uploading || Boolean(busy) || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}
@@ -394,6 +393,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
               <CloudUpload className="mb-2 h-7 w-7 text-brand-700" aria-hidden />
               <p className="text-sm font-semibold">Drag images here or browse files</p>
               <p className="mt-1 text-xs text-muted">JPG or PNG · 8 MB max per image · up to {MAX_POST_MEDIA_ITEMS} images</p>
+              <p className="mt-1 text-xs text-muted">Other file types are rejected with an explanation.</p>
             </div>
 
             {uploading && (
@@ -402,7 +402,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
                 Uploading images to Cloudinary…
               </p>
             )}
-            {uploadError && <Alert tone="danger" title="Some images couldn't be added">{uploadError}</Alert>}
+            {uploadError && <Alert tone="danger" title="Some files were rejected">{uploadError}</Alert>}
 
             {values.mediaUrls.map((url, i) => (
               <div key={i} className="flex items-start gap-3">
