@@ -8,43 +8,33 @@ import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/card";
 
 export default function FeedbackQrCodesPage() {
-  const { businesses, loading, error, refreshBusinesses } = useBusiness();
+  const { activeBusiness, loading, error, refreshBusinesses } = useBusiness();
 
   return (
     <>
       <PageHeader
-        title="Feedback QR codes"
-        description="Generate, download and share a feedback QR code for each of your businesses."
+        title="Feedback QR code"
+        description="Generate, download and share the feedback QR code for your currently selected business."
       />
 
-      {loading && (
-        <div className="grid gap-4 xl:grid-cols-2">
-          <CardSkeleton lines={5} />
-          <CardSkeleton lines={5} />
-        </div>
-      )}
+      {loading && <CardSkeleton lines={5} />}
 
-      {error && <ErrorState error={error} onRetry={refreshBusinesses} title="Couldn't load businesses" />}
+      {error && <ErrorState error={error} onRetry={refreshBusinesses} title="Couldn't load your business" />}
 
-      {!loading && !error && businesses.length === 0 && (
+      {!loading && !error && !activeBusiness && (
         <EmptyState
           icon={QrCode}
-          title="No active businesses"
-          description="Create or enable a business to generate its customer feedback QR code."
+          title="No current business selected"
+          description="Create or enable a business, then select it as your current business to generate its customer feedback QR code."
           action={<ButtonLink href="/businesses">Go to businesses</ButtonLink>}
         />
       )}
 
-      {!loading && !error && businesses.length > 0 && (
-        <div className="grid gap-4 xl:grid-cols-2">
-          {businesses.map((business) => (
-            <FeedbackQrCard
-              key={business._id}
-              businessId={business._id}
-              businessName={business.name}
-            />
-          ))}
-        </div>
+      {!loading && !error && activeBusiness && (
+        <FeedbackQrCard
+          businessId={activeBusiness._id}
+          businessName={activeBusiness.name}
+        />
       )}
     </>
   );
