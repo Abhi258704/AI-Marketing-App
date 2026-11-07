@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { CalendarClock, CloudUpload, ImageIcon, LoaderCircle, Plus, Save, Send, Trash2 } from "lucide-react";
+import { CalendarClock, CloudUpload, LoaderCircle, Save, Send, Trash2 } from "lucide-react";
 import { useBusiness } from "@/components/providers/business-provider";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useToast } from "@/components/providers/toast-provider";
@@ -110,9 +110,6 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
       ...v,
       platforms: v.platforms.includes(id) ? v.platforms.filter((p) => p !== id) : [...v.platforms, id],
     }));
-  const setMedia = (i, value) =>
-    setValues((v) => ({ ...v, mediaUrls: v.mediaUrls.map((m, idx) => (idx === i ? value : m)) }));
-  const addMedia = () => setValues((v) => (v.mediaUrls.filter((url) => url.trim()).length < MAX_POST_MEDIA_ITEMS ? { ...v, mediaUrls: [...v.mediaUrls, ""] } : v));
   const removeMedia = (i) =>
     setValues((v) => {
       const next = v.mediaUrls.filter((_, idx) => idx !== i);
@@ -355,7 +352,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
         </Card>
 
         <Card>
-          <CardHeader title="Media" description="Upload JPG or PNG images to Cloudinary, or paste a public image URL. Instagram requires at least one image." />
+          <CardHeader title="Media" description="Upload JPG or PNG images to Cloudinary. Instagram requires at least one image." />
           <CardBody className="space-y-4">
             <input
               ref={fileInputRef}
@@ -404,38 +401,34 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
             )}
             {uploadError && <Alert tone="danger" title="Some files were rejected">{uploadError}</Alert>}
 
-            {values.mediaUrls.map((url, i) => (
-              <div key={i} className="flex items-start gap-3">
-                <div className="min-w-0 flex-1">
-                  <Input
-                    aria-label={`Media URL ${i + 1}`}
-                    type="url"
-                    inputMode="url"
-                    placeholder="https://example.com/image.jpg"
-                    value={url}
-                    onChange={(e) => setMedia(i, e.target.value)}
-                    error={i === 0 ? errors.mediaUrls : undefined}
-                  />
-                  {url.trim() && isHttpUrl(url.trim()) && (
-                    <div className="mt-2 flex items-center gap-3">
-                      <MediaPreview key={url} url={url.trim()} />
-                      <span className="text-xs text-muted">Image {i + 1} preview</span>
+            {mediaList.length > 0 ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {values.mediaUrls.map((url, index) => {
+                  if (!url.trim()) return null;
+                  return (
+                    <div key={url + "-" + index} className="relative rounded-xl border border-line bg-surface p-2">
+                      <MediaPreview key={url} url={url.trim()} className="h-32 w-full" />
+                      <div className="mt-2 flex items-center justify-between gap-2">
+                        <span className="truncate text-xs text-muted">Image {index + 1}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeMedia(index)}
+                          aria-label={`Remove image ${index + 1}`}
+                          disabled={uploading || Boolean(busy)}
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden />
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                </div>
-                <Button variant="ghost" size="sm" className="mt-1" onClick={() => removeMedia(i)} aria-label={`Remove media URL ${i + 1}`} disabled={uploading || Boolean(busy)}>
-                  <Trash2 className="h-4 w-4" aria-hidden />
-                </Button>
+                  );
+                })}
               </div>
-            ))}
-            <div className="flex flex-wrap items-center gap-3">
-              <Button variant="secondary" size="sm" onClick={addMedia} disabled={uploading || Boolean(busy) || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}>
-                <Plus className="h-4 w-4" aria-hidden /> Add another URL
-              </Button>
-              <span className="flex items-center gap-1.5 text-xs text-muted">
-                <ImageIcon className="h-3.5 w-3.5" aria-hidden /> You can also paste a publicly accessible image URL.
-              </span>
-            </div>
+            ) : (
+              <p className="rounded-lg bg-canvas px-3 py-4 text-center text-sm text-muted">
+                No images uploaded yet. Choose files above to add images to this post.
+              </p>
+            )}
           </CardBody>
         </Card>
 
