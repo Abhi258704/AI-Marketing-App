@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, FilePlus2, ImagePlus, RefreshCw, Sparkles, Wand2 } from "lucide-react";
+import { Check, Copy, FilePlus2, ImagePlus, RefreshCw, RotateCcw, Sparkles, Wand2 } from "lucide-react";
 import { RequireBusiness } from "@/components/layout/require-business";
 import { useBusiness } from "@/components/providers/business-provider";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -19,7 +19,7 @@ import {
 } from "@/lib/api/ai";
 import { API_BASE_URL } from "@/lib/config";
 import { createPost } from "@/lib/api/posts";
-import { getContentStudioDraft, saveContentStudioDraft } from "@/lib/local-store";
+import { clearContentStudioDraft, getContentStudioDraft, saveContentStudioDraft } from "@/lib/local-store";
 import { getErrorMessage } from "@/lib/api/client";
 import {
   INSTAGRAM_CAPTION_LIMIT,
@@ -232,6 +232,40 @@ function StudioContent({ business }) {
     original !== null &&
     (caption !== original.caption || cta !== original.callToAction || hashtagText !== original.hashtags.join(" "));
 
+  function resetFields({ keepStagedImage = false } = {}) {
+    // A staged image belongs to a saved Post once saved; only delete unsaved media on manual reset.
+    const imageToDelete =
+      !keepStagedImage && generatedImageUrl && !savedPost ? generatedImageUrl : null;
+
+    requestId.current += 1;
+    setPlatform("instagram");
+    setTopic("");
+    setGoal(GOALS[0]);
+    setTone(TONES[0]);
+    setTopicError(null);
+    setGenerating(false);
+    setGenError(null);
+    setOriginal(null);
+    setCaption("");
+    setCta("");
+    setHashtagText("");
+    setIncludeCta(true);
+    setIncludeHashtags(true);
+    setVisualPrompt("");
+    setGeneratedImageUrl("");
+    setImageGenerating(false);
+    setImageError(null);
+    setProducedFor(null);
+    setSavedPost(null);
+    setConfirmRegen(false);
+    setRestoredDraft(false);
+    clearContentStudioDraft(userId, business._id);
+
+    if (imageToDelete) {
+      deleteGeneratedImage({ businessId: business._id, mediaUrl: imageToDelete }).catch(() => {});
+    }
+  }
+
   async function generate() {
     if (!topic.trim()) {
       setTopicError("Describe the topic or campaign idea.");
@@ -319,18 +353,20 @@ function StudioContent({ business }) {
     if (!finalText) return;
     setSaving(true);
     try {
-      const { post } = await createPost({
+      await createPost({
         businessId: business._id,
         title: topic.trim().slice(0, 100) || null,
         content: finalText,
         mediaUrls: generatedImageUrl ? [generatedImageUrl] : [],
         platforms: [producedFor?.platform || platform],
       });
-      setSavedPost(post);
+
+      // The Post now owns the staged image. Clear the editor but do not delete that media.
+      resetFields({ keepStagedImage: true });
       toast.success("Saved as a draft", {
         message: generatedImageUrl
-          ? "Your AI-generated image was attached to the draft."
-          : "Open the draft to upload images and schedule it.",
+          ? "Your AI-generated image was attached. The fields are ready for your next post."
+          : "Your draft is saved. The fields are ready for your next post.",
       });
     } catch (e) {
       toast.error("Couldn't save the draft", { message: getErrorMessage(e) });
@@ -408,9 +444,21 @@ function StudioContent({ business }) {
                 {TONES.map((t) => <option key={t}>{t}</option>)}
               </Select>
 
-              <Button type="submit" className="w-full" loading={generating}>
-                <Sparkles className="h-4 w-4" aria-hidden /> {original ? "Generate new version" : "Generate content"}
-              </Button>
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+                <Button type="submit" loading={generating} disabled={generating || saving || imageGenerating}>
+                  <Sparkles className="h-4 w-4" aria-hidden /> {original ? "Generate new version" : "Generate content"}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => resetFields()}
+                  disabled={generating || saving || imageGenerating}
+                  title="Clear all Content Studio fields"
+                >
+                  <RotateCcw className="h-4 w-4" aria-hidden />
+                  Reset fields
+                </Button>
+              </div>
             </CardBody>
           </Card>
         </form>
