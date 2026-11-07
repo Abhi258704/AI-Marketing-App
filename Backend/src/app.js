@@ -17,6 +17,7 @@ import recommendationRoutes from "./routes/recommendation.routes.js";
 import notificationRoutes from "./routes/notification.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
+import uploadRoutes from "./routes/upload.routes.js";
 
 dotenv.config();
 
@@ -71,6 +72,8 @@ app.use("/api/notifications", notificationRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 app.use("/api/reviews", reviewRoutes);
+
+app.use("/api/uploads", uploadRoutes);
 
 
 
