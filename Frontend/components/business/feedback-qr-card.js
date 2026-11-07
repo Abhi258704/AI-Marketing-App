@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { Download, ExternalLink, QrCode } from "lucide-react";
@@ -13,27 +14,31 @@ export function FeedbackQrCard({ businessId, businessName }) {
 
   useEffect(() => {
     let cancelled = false;
-    const url = new URL(`/feedback/${businessId}`, window.location.origin).toString();
 
-    setFeedbackUrl(url);
-    setQrDataUrl("");
-    setError("");
+    Promise.resolve().then(() => {
+      if (cancelled) return undefined;
 
-    QRCode.toDataURL(url, {
-      errorCorrectionLevel: "H",
-      margin: 2,
-      width: 320,
-      color: {
-        dark: "#111827",
-        light: "#FFFFFF",
-      },
-    })
-      .then((dataUrl) => {
-        if (!cancelled) setQrDataUrl(dataUrl);
+      const url = new URL(`/feedback/${businessId}`, window.location.origin).toString();
+      setFeedbackUrl(url);
+      setQrDataUrl("");
+      setError("");
+
+      return QRCode.toDataURL(url, {
+        errorCorrectionLevel: "H",
+        margin: 2,
+        width: 320,
+        color: {
+          dark: "#111827",
+          light: "#FFFFFF",
+        },
       })
-      .catch(() => {
-        if (!cancelled) setError("Couldn't generate the QR code. Please refresh the page.");
-      });
+        .then((dataUrl) => {
+          if (!cancelled) setQrDataUrl(dataUrl);
+        })
+        .catch(() => {
+          if (!cancelled) setError("Couldn't generate the QR code. Please refresh the page.");
+        });
+    });
 
     return () => {
       cancelled = true;
@@ -51,7 +56,7 @@ export function FeedbackQrCard({ businessId, businessName }) {
       <CardBody className="flex flex-col gap-4 sm:flex-row sm:items-center">
         <div className="flex h-44 w-44 shrink-0 items-center justify-center rounded-xl border border-line bg-white p-3">
           {qrDataUrl ? (
-            <img src={qrDataUrl} alt={`QR code for ${businessName} customer feedback form`} className="h-full w-full object-contain" />
+            <Image src={qrDataUrl} alt={`QR code for ${businessName} customer feedback form`} width={160} height={160} unoptimized className="h-full w-full object-contain" />
           ) : (
             <p className="px-2 text-center text-xs text-muted">
               {error || "Generating QR code…"}

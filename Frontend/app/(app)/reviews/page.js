@@ -44,8 +44,17 @@ export default function ReviewsAdminPage() {
   }, [filter]);
 
   useEffect(() => {
-    if (user) loadReviews();
-  }, [user, loadReviews]);
+    if (!user?.id) return undefined;
+    let cancelled = false;
+
+    Promise.resolve().then(() => {
+      if (!cancelled) loadReviews();
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, loadReviews]);
 
   async function handleModeration(reviewId, status) {
     setBusyId(reviewId);

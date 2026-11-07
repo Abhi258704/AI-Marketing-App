@@ -41,8 +41,11 @@ export function SidebarNav({ onNavigate }) {
 
   useEffect(() => {
     if (!user?.id) return undefined;
+    let cancelled = false;
 
-    refreshPendingReviews();
+    Promise.resolve().then(() => {
+      if (!cancelled) refreshPendingReviews();
+    });
 
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") refreshPendingReviews();
@@ -57,6 +60,7 @@ export function SidebarNav({ onNavigate }) {
     window.addEventListener("reviews:updated", onReviewsUpdated);
 
     return () => {
+      cancelled = true;
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("reviews:updated", onReviewsUpdated);
