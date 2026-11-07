@@ -143,3 +143,36 @@ export async function removeTemporaryMedia(mediaUrls, business) {
         }
     }
 }
+
+
+export async function saveGeneratedTemporaryImage(buffer, mimeType, business) {
+    const maxSizeBytes = 8 * 1024 * 1024;
+
+    if (!Buffer.isBuffer(buffer) || buffer.length === 0) {
+        throw new Error("The image generator returned an empty image.");
+    }
+    if (buffer.length > maxSizeBytes) {
+        throw new Error("The generated image is larger than 8 MB.");
+    }
+
+    const isJpeg =
+        mimeType === "image/jpeg" &&
+        buffer.length >= 3 &&
+        buffer[0] === 0xff &&
+        buffer[1] === 0xd8 &&
+        buffer[2] === 0xff;
+
+    if (!isJpeg) {
+        throw new Error("Cloudflare returned an unsupported image format.");
+    }
+
+    const ownerId = String(business.ownerId);
+    const businessId = String(business._id);
+    const folder = path.join(TEMP_MEDIA_ROOT, ownerId, businessId);
+    const fileName = `${randomUUID()}.jpg`;
+
+    await fs.mkdir(folder, { recursive: true });
+    await fs.writeFile(path.join(folder, fileName), buffer, { flag: "wx" });
+
+    return `/temp/${ownerId}/${businessId}/${fileName}`;
+}
