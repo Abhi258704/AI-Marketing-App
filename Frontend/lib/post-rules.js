@@ -38,6 +38,12 @@ export const isHttpUrl = (value) => {
   }
 };
 
+export const isTempMediaPath = (value) =>
+  /^\/temp\/[a-f0-9]{24}\/[a-f0-9]{24}\/[a-f0-9-]{36}\.(jpg|jpeg|png)$/i.test(value);
+
+export const isPostMediaReference = (value) =>
+  isHttpUrl(value) || isTempMediaPath(value);
+
 export const countHashtags = (text = "") => (text.match(/(^|\s)#[\p{L}\p{N}_]+/gu) || []).length;
 
 // Posts can be edited unless they are already live or being processed.
@@ -61,8 +67,8 @@ export function validatePost(values, intent = "draft") {
   if (!content) errors.content = "Write the post content.";
   if ((values.title || "").length > 120) errors.title = "Keep the title under 120 characters.";
 
-  const badUrl = media.find((u) => !isHttpUrl(u));
-  if (badUrl) errors.mediaUrls = `"${badUrl}" is not a valid http(s) URL.`;
+  const badUrl = media.find((u) => !isPostMediaReference(u));
+  if (badUrl) errors.mediaUrls = "An image reference is invalid. Remove it and upload the image again.";
 
   if (intent !== "draft" && platforms.length === 0) {
     errors.platforms = "Select at least one platform to publish or schedule.";
@@ -72,7 +78,7 @@ export function validatePost(values, intent = "draft") {
     if (intent !== "draft" && media.length === 0) {
       errors.mediaUrls =
         errors.mediaUrls ||
-        "Instagram posts need at least one public image URL. Add one or deselect Instagram.";
+        "Instagram posts need at least one image. Upload one before publishing or scheduling.";
     }
     if (content.length > INSTAGRAM_CAPTION_LIMIT) {
       errors.content = `Instagram captions are limited to ${INSTAGRAM_CAPTION_LIMIT} characters (currently ${content.length}).`;
@@ -82,15 +88,15 @@ export function validatePost(values, intent = "draft") {
         errors.content || `Instagram allows at most ${INSTAGRAM_HASHTAG_LIMIT} hashtags.`;
     }
     if (media.length > 1) {
-      warnings.push("Only the first media URL is published to Instagram (single-image posts).");
+      warnings.push("Only the first image is published to Instagram (single-image posts).");
     }
     if (media.length === 0 && intent === "draft") {
-      warnings.push("Add an image URL before publishing or scheduling to Instagram.");
+      warnings.push("Add an image before publishing or scheduling to Instagram.");
     }
   }
 
   if (platforms.includes("facebook") && media.length > 0) {
-    warnings.push("Facebook posts currently publish text only; media URLs are not attached.");
+    warnings.push("Facebook posts currently publish text only; attached images are not sent to Facebook yet.");
   }
 
   return { errors, warnings };

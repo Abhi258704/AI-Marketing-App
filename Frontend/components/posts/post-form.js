@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { API_BASE_URL } from "@/lib/config";
 import { CalendarClock, CloudUpload, LoaderCircle, Save, Send, Trash2 } from "lucide-react";
 import { useBusiness } from "@/components/providers/business-provider";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -15,7 +16,7 @@ import { PlatformBadges } from "./post-badges";
 import { useApi } from "@/lib/use-api";
 import { listSocialAccounts } from "@/lib/api/social-accounts";
 import { getErrorMessage } from "@/lib/api/client";
-import { MAX_POST_IMAGE_SIZE_BYTES, MAX_POST_MEDIA_ITEMS, uploadPostImage } from "@/lib/api/uploads";
+import { MAX_POST_IMAGE_SIZE_BYTES, MAX_POST_MEDIA_ITEMS, stagePostImage } from "@/lib/api/uploads";
 import { publishPostSafely, savePost, schedulePostAt } from "@/lib/post-actions";
 import {
   INSTAGRAM_CAPTION_LIMIT,
@@ -42,7 +43,8 @@ function initialValues(post, defaultBusinessId) {
 
 export function MediaPreview({ url, className = "h-24 w-24" }) {
   const [failed, setFailed] = useState(false);
-  if (!url || !isHttpUrl(url)) return null;
+  const previewUrl = url?.startsWith("/temp/") ? `${API_BASE_URL}${url}` : url;
+  if (!url || !isHttpUrl(previewUrl)) return null;
   if (failed) {
     return (
       <div className={"flex " + className + " items-center justify-center rounded-lg bg-sunken px-2 text-center text-xs text-muted"} role="img" aria-label="Image preview unavailable">
@@ -53,7 +55,7 @@ export function MediaPreview({ url, className = "h-24 w-24" }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element -- arbitrary user-supplied URL
     <img
-      src={url}
+      src={previewUrl}
       alt="Media preview"
       loading="lazy"
       referrerPolicy="no-referrer"
@@ -161,7 +163,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
     setUploading(true);
     try {
       const results = await Promise.allSettled(
-        validFiles.map((file) => uploadPostImage(file, values.businessId))
+        validFiles.map((file) => stagePostImage(file, values.businessId))
       );
 
       const uploadedUrls = results
@@ -179,7 +181,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
         });
         toast.success(
           uploadedUrls.length === 1 ? "Image uploaded" : `${uploadedUrls.length} images uploaded`,
-          { message: "Images are stored securely in Cloudinary." }
+          { message: "Images are saved in Backend/public/temp. They move to Cloudinary when you publish or schedule." }
         );
       }
 
@@ -352,7 +354,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
         </Card>
 
         <Card>
-          <CardHeader title="Media" description="Upload JPG or PNG images to Cloudinary. Instagram requires at least one image." />
+          <CardHeader title="Media" description="Images stay in temporary storage until you publish or schedule. Instagram requires at least one image." />
           <CardBody className="space-y-4">
             <input
               ref={fileInputRef}
@@ -396,7 +398,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
             {uploading && (
               <p role="status" className="flex items-center gap-2 text-sm text-muted">
                 <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
-                Uploading images to Cloudinary…
+                Saving images in temporary storage…
               </p>
             )}
             {uploadError && <Alert tone="danger" title="Some files were rejected">{uploadError}</Alert>}
