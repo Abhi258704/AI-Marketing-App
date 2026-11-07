@@ -114,43 +114,43 @@ function StudioContent({ business }) {
       if (cancelled) return;
 
       const draft = getContentStudioDraft(userId, business._id);
-    if (draft && typeof draft === "object") {
-      const storedOriginal =
-        draft.original && typeof draft.original.caption === "string"
-          ? {
-              caption: draft.original.caption,
-              callToAction: typeof draft.original.callToAction === "string" ? draft.original.callToAction : "",
-              hashtags: Array.isArray(draft.original.hashtags)
-                ? draft.original.hashtags.filter((item) => typeof item === "string")
-                : [],
-            }
-          : null;
-      const storedProducedFor =
-        draft.producedFor && PLATFORMS.some((item) => item.id === draft.producedFor.platform)
-          ? {
-              platform: draft.producedFor.platform,
-              businessName: typeof draft.producedFor.businessName === "string"
-                ? draft.producedFor.businessName
-                : business.name,
-            }
-          : null;
+      if (draft && typeof draft === "object") {
+        const storedOriginal =
+          draft.original && typeof draft.original.caption === "string"
+            ? {
+                caption: draft.original.caption,
+                callToAction: typeof draft.original.callToAction === "string" ? draft.original.callToAction : "",
+                hashtags: Array.isArray(draft.original.hashtags)
+                  ? draft.original.hashtags.filter((item) => typeof item === "string")
+                  : [],
+              }
+            : null;
+        const storedProducedFor =
+          draft.producedFor && PLATFORMS.some((item) => item.id === draft.producedFor.platform)
+            ? {
+                platform: draft.producedFor.platform,
+                businessName: typeof draft.producedFor.businessName === "string"
+                  ? draft.producedFor.businessName
+                  : business.name,
+              }
+            : null;
 
-      setPlatform(PLATFORMS.some((item) => item.id === draft.platform) ? draft.platform : "instagram");
-      setTopic(typeof draft.topic === "string" ? draft.topic : "");
-      setGoal(typeof draft.goal === "string" ? draft.goal : GOALS[0]);
-      setTone(typeof draft.tone === "string" ? draft.tone : TONES[0]);
-      setOriginal(storedOriginal);
-      setCaption(typeof draft.caption === "string" ? draft.caption : storedOriginal?.caption || "");
-      setCta(typeof draft.cta === "string" ? draft.cta : storedOriginal?.callToAction || "");
-      setHashtagText(
-        typeof draft.hashtagText === "string" ? draft.hashtagText : storedOriginal?.hashtags.join(" ") || ""
-      );
-      setIncludeCta(typeof draft.includeCta === "boolean" ? draft.includeCta : true);
-      setIncludeHashtags(typeof draft.includeHashtags === "boolean" ? draft.includeHashtags : true);
-      setProducedFor(storedProducedFor);
-      setSavedPost(draft.savedPost && typeof draft.savedPost._id === "string" ? draft.savedPost : null);
-      setRestoredDraft(Boolean(storedOriginal || draft.caption || draft.topic || draft.savedPost));
-    }
+        setPlatform(PLATFORMS.some((item) => item.id === draft.platform) ? draft.platform : "instagram");
+        setTopic(typeof draft.topic === "string" ? draft.topic : "");
+        setGoal(typeof draft.goal === "string" ? draft.goal : GOALS[0]);
+        setTone(typeof draft.tone === "string" ? draft.tone : TONES[0]);
+        setOriginal(storedOriginal);
+        setCaption(typeof draft.caption === "string" ? draft.caption : storedOriginal?.caption || "");
+        setCta(typeof draft.cta === "string" ? draft.cta : storedOriginal?.callToAction || "");
+        setHashtagText(
+          typeof draft.hashtagText === "string" ? draft.hashtagText : storedOriginal?.hashtags.join(" ") || ""
+        );
+        setIncludeCta(typeof draft.includeCta === "boolean" ? draft.includeCta : true);
+        setIncludeHashtags(typeof draft.includeHashtags === "boolean" ? draft.includeHashtags : true);
+        setProducedFor(storedProducedFor);
+        setSavedPost(draft.savedPost && typeof draft.savedPost._id === "string" ? draft.savedPost : null);
+        setRestoredDraft(Boolean(storedOriginal || draft.caption || draft.topic || draft.savedPost));
+      }
 
       setHydratedScope(draftScope);
     });
