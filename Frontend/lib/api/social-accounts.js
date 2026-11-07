@@ -8,3 +8,9 @@ export const getFacebookConnectUrl = (businessId) =>
 
 export const getInstagramConnectUrl = (businessId) =>
   apiFetch("/api/social-accounts/instagram/connect", { query: { businessId } });
+
+export const keepInstagramAccount = (socialAccountId) =>
+  apiFetch(`/api/social-accounts/instagram/${socialAccountId}/keep`, {
+    method: "PATCH",
+    body: {},
+  });
