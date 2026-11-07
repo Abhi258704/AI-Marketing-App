@@ -12,7 +12,14 @@ async function keepOnlyInstagramAccount(businessId, socialAccountId) {
             platform: "instagram",
             _id: { $ne: socialAccountId },
         },
-        { $set: { status: "disconnected" } }
+        {
+            $set: {
+                status: "disconnected",
+                accessToken: null,
+                refreshToken: null,
+                tokenExpiresAt: null,
+            },
+        }
     );
 }
 
@@ -161,6 +168,16 @@ const keepInstagramAccount = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 message: "Business not found",
+            });
+        }
+
+        if (
+            !socialAccount.accessToken ||
+            (socialAccount.tokenExpiresAt && socialAccount.tokenExpiresAt <= new Date())
+        ) {
+            return res.status(409).json({
+                success: false,
+                message: "This Instagram account needs to be reconnected before it can be selected.",
             });
         }
 
