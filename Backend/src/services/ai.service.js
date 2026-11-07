@@ -72,9 +72,54 @@ const generateMarketingContent = async (prompt) => {
 
 
 
+const generateMarketingImage = async ({ prompt, aspectRatio = "1:1" }) => {
+    const model = process.env.GEMINI_IMAGE_MODEL || "gemini-3.1-flash-image";
+
+    const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+            responseModalities: ["IMAGE"],
+            responseFormat: {
+                image: {
+                    aspectRatio,
+                    imageSize: "1K",
+                },
+            },
+        },
+    });
+
+    const parts = response.candidates?.flatMap(
+        (candidate) => candidate.content?.parts || []
+    ) || [];
+    const imagePart = parts.find(
+        (part) =>
+            part.inlineData?.data &&
+            typeof part.inlineData.mimeType === "string" &&
+            part.inlineData.mimeType.startsWith("image/")
+    );
+
+    if (!imagePart) {
+        const wasBlocked = Boolean(response.promptFeedback?.blockReason);
+        throw new Error(
+            wasBlocked
+                ? "Google's safety checks blocked this image prompt. Change the prompt and try again."
+                : "Gemini did not return an image. Please try a different prompt."
+        );
+    }
+
+    return {
+        buffer: Buffer.from(imagePart.inlineData.data, "base64"),
+        mimeType: imagePart.inlineData.mimeType,
+        model,
+    };
+};
+
 export {
+    generateMarketingImage,
     generateMarketingContent,
 };
+
 
 
 
