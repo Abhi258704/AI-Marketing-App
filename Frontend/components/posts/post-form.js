@@ -190,7 +190,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
   function handleFileDrop(event) {
     event.preventDefault();
     setDraggingFiles(false);
-    if (!uploading) uploadSelectedFiles(event.dataTransfer.files);
+    if (!uploading && !busy) uploadSelectedFiles(event.dataTransfer.files);
   }
 
   function check(intent) {
@@ -277,7 +277,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
               required
               value={values.businessId}
               onChange={set("businessId")}
-              disabled={editing || uploading}
+              disabled={editing || uploading || Boolean(busy)}
               error={errors.businessId}
               hint={editing ? "A post's business can't be changed after it's created." : undefined}
             >
@@ -347,29 +347,29 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
               accept="image/jpeg,image/png"
               multiple
               className="sr-only"
-              disabled={uploading || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}
+              disabled={uploading || Boolean(busy) || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}
               onChange={handleFileInputChange}
               aria-label="Choose images to upload"
             />
 
             <div
               role="button"
-              tabIndex={uploading || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS ? -1 : 0}
-              aria-disabled={uploading || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}
+              tabIndex={uploading || busy || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS ? -1 : 0}
+              aria-disabled={uploading || Boolean(busy) || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}
               onClick={() => {
-                if (!uploading && values.mediaUrls.filter((url) => url.trim()).length < MAX_POST_MEDIA_ITEMS) {
+                if (!uploading && !busy && values.mediaUrls.filter((url) => url.trim()).length < MAX_POST_MEDIA_ITEMS) {
                   fileInputRef.current?.click();
                 }
               }}
               onKeyDown={(event) => {
-                if ((event.key === "Enter" || event.key === " ") && !uploading) {
+                if ((event.key === "Enter" || event.key === " ") && !uploading && !busy) {
                   event.preventDefault();
                   fileInputRef.current?.click();
                 }
               }}
               onDragOver={(event) => {
                 event.preventDefault();
-                if (!uploading) setDraggingFiles(true);
+                if (!uploading && !busy) setDraggingFiles(true);
               }}
               onDragLeave={() => setDraggingFiles(false)}
               onDrop={handleFileDrop}
@@ -401,13 +401,13 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
                     error={i === 0 ? errors.mediaUrls : undefined}
                   />
                 </div>
-                <Button variant="ghost" size="sm" className="mt-1" onClick={() => removeMedia(i)} aria-label={`Remove media URL ${i + 1}`} disabled={uploading}>
+                <Button variant="ghost" size="sm" className="mt-1" onClick={() => removeMedia(i)} aria-label={`Remove media URL ${i + 1}`} disabled={uploading || Boolean(busy)}>
                   <Trash2 className="h-4 w-4" aria-hidden />
                 </Button>
               </div>
             ))}
             <div className="flex flex-wrap items-center gap-3">
-              <Button variant="secondary" size="sm" onClick={addMedia} disabled={uploading || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}>
+              <Button variant="secondary" size="sm" onClick={addMedia} disabled={uploading || Boolean(busy) || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}>
                 <Plus className="h-4 w-4" aria-hidden /> Add another URL
               </Button>
               <span className="flex items-center gap-1.5 text-xs text-muted">
@@ -444,16 +444,16 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
         )}
 
         <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-canvas/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border sm:bg-surface">
-          {onCancel && <Button variant="ghost" onClick={onCancel} disabled={Boolean(busy)}>Cancel</Button>}
-          <Button variant="secondary" onClick={saveDraft} loading={busy === "draft"} disabled={Boolean(busy)}>
+          {onCancel && <Button variant="ghost" onClick={onCancel} disabled={Boolean(busy) || uploading}>Cancel</Button>}
+          <Button variant="secondary" onClick={saveDraft} loading={busy === "draft"} disabled={Boolean(busy) || uploading}>
             <Save className="h-4 w-4" aria-hidden /> {editing || postId ? "Save changes" : "Save as draft"}
           </Button>
           {canSchedule && (
-            <Button variant="secondary" onClick={() => startConfirm("schedule")} disabled={Boolean(busy)}>
+            <Button variant="secondary" onClick={() => startConfirm("schedule")} disabled={Boolean(busy) || uploading}>
               <CalendarClock className="h-4 w-4" aria-hidden /> {post?.status === "scheduled" ? "Reschedule" : "Schedule"}
             </Button>
           )}
-          <Button onClick={() => startConfirm("publish")} disabled={Boolean(busy)}>
+          <Button onClick={() => startConfirm("publish")} disabled={Boolean(busy) || uploading}>
             <Send className="h-4 w-4" aria-hidden /> {post?.status === "failed" ? "Retry publishing" : "Publish now"}
           </Button>
         </div>
