@@ -341,7 +341,11 @@ function StudioContent({ business }) {
         platforms: [producedFor?.platform || platform],
       });
       setSavedPost(post);
-      toast.success("Saved as a draft", { message: "Open the draft to upload images and schedule it." });
+      toast.success("Saved as a draft", {
+        message: generatedImageUrl
+          ? "Your AI-generated image was attached to the draft."
+          : "Open the draft to upload images and schedule it.",
+      });
     } catch (e) {
       toast.error("Couldn't save the draft", { message: getErrorMessage(e) });
     } finally {
@@ -497,7 +501,7 @@ function StudioContent({ business }) {
                   {savedPost ? (
                     <Alert tone="success" title="Draft saved">
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <ButtonLink size="sm" href={`/posts/${savedPost._id}`}>{generatedImageUrl ? "Open draft" : "Open draft &amp; upload media"}</ButtonLink>
+                        <ButtonLink size="sm" href={`/posts/${savedPost._id}`}>{generatedImageUrl ? "Open draft" : "Open draft & upload media"}</ButtonLink>
                         {!generatedImageUrl && (
                           <Button size="sm" variant="secondary" onClick={() => setSavedPost(null)}>Save another copy</Button>
                         )}
@@ -544,7 +548,7 @@ function StudioContent({ business }) {
               ))}
             </Select>
             <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={generateImageAsset} loading={imageGenerating} disabled={!topic.trim()}>
+              <Button onClick={generateImageAsset} loading={imageGenerating} disabled={imageGenerating || !topic.trim()}>
                 <ImagePlus className="h-4 w-4" aria-hidden /> Generate AI image
               </Button>
               <p className="text-xs text-muted">Uses Gemini image generation. API usage may incur charges.</p>
