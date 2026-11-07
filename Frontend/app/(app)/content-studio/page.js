@@ -61,7 +61,7 @@ function normalizeResult(content) {
 function loadCanvasImage(src) {
   return new Promise((resolve, reject) => {
     const image = new Image();
-    if (/^https?:\\/\\//i.test(src)) image.crossOrigin = "anonymous";
+    if (src.startsWith("http://") || src.startsWith("https://")) image.crossOrigin = "anonymous";
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error("Couldn't load the generated image for poster design."));
     image.src = src;
@@ -69,7 +69,7 @@ function loadCanvasImage(src) {
 }
 
 function wrapCanvasText(ctx, text, maxWidth, maxLines) {
-  const words = String(text || "").trim().split(/\\s+/).filter(Boolean);
+  const words = String(text || "").trim().split(/\s+/).filter(Boolean);
   const lines = [];
   let line = "";
 
@@ -138,7 +138,7 @@ async function composeMarketingPoster({
 
   let logoDrawn = false;
   if (business.logoUrl) {
-    const logoSrc = /^https?:\\/\\//i.test(business.logoUrl)
+    const logoSrc = (business.logoUrl.startsWith("http://") || business.logoUrl.startsWith("https://"))
       ? business.logoUrl
       : `${API_BASE_URL}${business.logoUrl.startsWith("/") ? "" : "/"}${business.logoUrl}`;
     try {
@@ -187,12 +187,12 @@ async function composeMarketingPoster({
 
   const buttonY = 914;
   const buttonLabel = String(ctaText || "CONTACT US TODAY").trim().toUpperCase().slice(0, 30);
+  ctx.font = "700 25px Arial, sans-serif";
   ctx.fillStyle = "#0e8a72";
   ctx.beginPath();
   ctx.roundRect(76, buttonY, Math.max(300, Math.min(560, ctx.measureText(buttonLabel).width + 100)), 76, 18);
   ctx.fill();
   ctx.fillStyle = "#ffffff";
-  ctx.font = "700 25px Arial, sans-serif";
   ctx.fillText(buttonLabel, 112, buttonY + 48);
 
   const contact = [business.address, business.phone].filter(Boolean).join("  •  ");
@@ -500,7 +500,7 @@ function StudioContent({ business }) {
 
       const supportingText =
         posterSupportingText.trim() ||
-        caption.trim().split(/[.!?](?:\\s|$)/)[0] ||
+        caption.trim().split(/[.!?](?:\s|$)/)[0] ||
         business.description ||
         `Professional ${business.category || "local"} services you can trust.`;
       const posterData = await composeMarketingPoster({
