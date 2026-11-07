@@ -319,6 +319,68 @@ const generateImage = async (req, res) => {
     }
 };
 
+const saveGeneratedPoster = async (req, res) => {
+    try {
+        const { businessId, imageData } = req.body || {};
+
+        if (
+            typeof businessId !== "string" ||
+            !mongoose.isValidObjectId(businessId) ||
+            typeof imageData !== "string" ||
+            !imageData.startsWith("data:image/jpeg;base64,") ||
+            imageData.length > 11200000
+        ) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid businessId and JPEG poster image are required (maximum 8 MB).",
+            });
+        }
+
+        const base64 = imageData.slice("data:image/jpeg;base64,".length);
+        if (!/^[A-Za-z0-9+/]+={0,2}$/.test(base64)) {
+            return res.status(400).json({
+                success: false,
+                message: "The poster image data is invalid.",
+            });
+        }
+
+        const buffer = Buffer.from(base64, "base64");
+        if (!buffer.length || buffer.length > 8 * 1024 * 1024) {
+            return res.status(413).json({
+                success: false,
+                message: "The poster must be smaller than 8 MB.",
+            });
+        }
+
+        const business = await Business.findOne({
+            _id: businessId,
+            ownerId: req.user._id,
+            isActive: true,
+        }).select("_id ownerId");
+
+        if (!business) {
+            return res.status(404).json({
+                success: false,
+                message: "Business not found",
+            });
+        }
+
+        const mediaUrl = await saveGeneratedTemporaryImage(buffer, "image/jpeg", business);
+        return res.status(201).json({
+            success: true,
+            message: "Designed marketing poster saved to temporary media storage",
+            mediaUrl,
+            mimeType: "image/jpeg",
+        });
+    } catch (error) {
+        console.error("Save generated poster error:", error.message || error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || "Could not save the generated poster",
+        });
+    }
+};
+
 const deleteGeneratedImage = async (req, res) => {
     try {
         const { businessId, mediaUrl } = req.body || {};
@@ -361,5 +423,6 @@ const deleteGeneratedImage = async (req, res) => {
 
 export {
     generateImage,
+    saveGeneratedPoster,
     deleteGeneratedImage,
 };
