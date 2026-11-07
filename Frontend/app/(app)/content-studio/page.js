@@ -348,7 +348,7 @@ function StudioContent({ business }) {
       <PageHeader
         eyebrow="AI"
         title="Content Studio"
-        description="Describe what you want to promote and get a ready-to-edit caption, call to action and hashtags."
+        description="Create on-brand campaign visuals and ready-to-edit captions, all in one place."
       />
 
       {restoredDraft && (
@@ -416,6 +416,80 @@ function StudioContent({ business }) {
         </form>
 
         <div className="space-y-4">
+      <Card className="overflow-hidden border-brand-200">
+        <CardHeader
+          title="Create your campaign visual"
+          description="Generate an original image for this business and campaign."
+          action={
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-800">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden /> AI image
+            </span>
+          }
+        />
+        <CardBody className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(16rem,20rem)]">
+          <div className="flex min-w-0 flex-col gap-4">
+            <Textarea
+              label="Visual direction"
+              rows={5}
+              value={visualPrompt}
+              onChange={(e) => setVisualPrompt(e.target.value)}
+              maxLength={600}
+              hint="Optional. Describe the scene, style, colours, products or mood. Your business and campaign details are included automatically."
+              placeholder="e.g. Premium editorial food photography, warm natural light, rustic wooden table, appetizing close-up."
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={generateImageAsset} loading={imageGenerating} disabled={imageGenerating || !topic.trim()}>
+                <ImagePlus className="h-4 w-4" aria-hidden /> Generate image
+              </Button>
+              <span className="text-xs text-muted">Square format · FLUX.1 Schnell</span>
+            </div>
+            {imageRemaining !== null && (
+              <p className="text-xs text-muted">{imageRemaining} of your daily image generations remaining.</p>
+            )}
+            {!topic.trim() && (
+              <p className="text-xs text-muted">Add a campaign topic in the setup panel to enable image generation.</p>
+            )}
+            {imageError && <Alert tone="danger" title="Image generation failed">{imageError}</Alert>}
+          </div>
+
+          <div className="space-y-2">
+            <div
+              role="img"
+              aria-label={generatedImagePreview ? `AI-generated marketing image for ${business.name}` : "Preview area for your generated marketing image"}
+              className={`relative aspect-square w-full overflow-hidden rounded-xl border border-line bg-canvas bg-center bg-no-repeat ${generatedImagePreview ? "bg-cover" : "bg-contain"}`}
+              style={generatedImagePreview ? { backgroundImage: `url("${generatedImagePreview}")` } : undefined}
+            >
+              {!generatedImagePreview && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                  <span className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
+                    <ImagePlus className="h-5 w-5" aria-hidden />
+                  </span>
+                  <p className="text-sm font-medium">Your image preview</p>
+                  <p className="mt-1 max-w-xs text-xs text-muted">Your generated visual will appear here.</p>
+                </div>
+              )}
+              {generatedImagePreview && (
+                <span className="absolute left-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-xs font-medium text-ink shadow-sm">
+                  AI generated
+                </span>
+              )}
+              {imageGenerating && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/75 text-sm font-medium text-ink backdrop-blur-[2px]" role="status">
+                  <RefreshCw className="h-5 w-5 animate-spin text-brand-700" aria-hidden />
+                  Creating your image…
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-muted">
+              {generatedImagePreview
+                ? "This image will be attached when you save the post as a draft."
+                : "A square image works well for Instagram and Facebook posts."}
+            </p>
+          </div>
+        </CardBody>
+      </Card>
+
+      <ConfirmDialog
           {genError && <Alert tone="danger" title="Generation failed">{genError}</Alert>}
 
           {generating && (
@@ -508,59 +582,7 @@ function StudioContent({ business }) {
         </div>
       </div>
 
-      <Card className="mt-6">
-        <CardHeader
-          title="AI image generator"
-          description="Create an original marketing image for this business and campaign using Cloudflare Workers AI."
-        />
-        <CardBody className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)]">
-          <div className="space-y-4">
-            <Textarea
-              label="Visual direction (optional)"
-              rows={4}
-              value={visualPrompt}
-              onChange={(e) => setVisualPrompt(e.target.value)}
-              maxLength={600}
-              hint="Describe the scene, style, colours, products or mood. Your business and campaign details are included automatically."
-              placeholder="e.g. Premium editorial food photography, warm natural light, rustic wooden table, appetizing close-up."
-            />
-            <div className="flex flex-wrap items-center gap-3">
-              <Button onClick={generateImageAsset} loading={imageGenerating} disabled={imageGenerating || !topic.trim()}>
-                <ImagePlus className="h-4 w-4" aria-hidden /> Generate AI image
-              </Button>
-              <p className="text-xs text-muted">Square image · FLUX.1 Schnell · free daily limits apply</p>
-            </div>
-            {imageRemaining !== null && (
-              <p className="text-xs text-muted">{imageRemaining} of your daily image generations remaining.</p>
-            )}
-            {imageError && <Alert tone="danger" title="Image generation failed">{imageError}</Alert>}
-          </div>
-
-          <div className="space-y-2">
-            {generatedImagePreview ? (
-              <>
-                <div
-                  role="img"
-                  aria-label={`AI-generated marketing image for ${business.name}`}
-                  className="aspect-square w-full overflow-hidden rounded-xl border border-line bg-canvas bg-contain bg-center bg-no-repeat"
-                  style={{ backgroundImage: `url("${generatedImagePreview}")` }}
-                />
-                <p className="text-xs text-muted">AI-generated image · square format</p>
-              </>
-            ) : (
-              <div className="flex min-h-64 flex-col items-center justify-center rounded-xl border border-dashed border-line-strong bg-canvas p-6 text-center">
-                <span className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-700">
-                  <ImagePlus className="h-5 w-5" aria-hidden />
-                </span>
-                <p className="text-sm font-medium">Your generated image will appear here</p>
-                <p className="mt-1 max-w-xs text-xs text-muted">Add a campaign topic, describe the visual direction and generate.</p>
-              </div>
-            )}
-          </div>
-        </CardBody>
-      </Card>
-
-      <ConfirmDialog
+      <Card classlog
         open={confirmRegen}
         onClose={() => setConfirmRegen(false)}
         onConfirm={() => { setConfirmRegen(false); generate(); }}
