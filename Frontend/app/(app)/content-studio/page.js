@@ -489,7 +489,6 @@ function StudioContent({ business }) {
         </CardBody>
       </Card>
 
-      <ConfirmDialog
           {genError && <Alert tone="danger" title="Generation failed">{genError}</Alert>}
 
           {generating && (
@@ -582,7 +581,7 @@ function StudioContent({ business }) {
         </div>
       </div>
 
-      <Card classlog
+      <ConfirmDialog
         open={confirmRegen}
         onClose={() => setConfirmRegen(false)}
         onConfirm={() => { setConfirmRegen(false); generate(); }}
