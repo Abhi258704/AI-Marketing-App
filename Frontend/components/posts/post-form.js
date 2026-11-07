@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { CalendarClock, ImageIcon, Plus, Save, Send, Trash2 } from "lucide-react";
+import { CalendarClock, CloudUpload, ImageIcon, LoaderCircle, Plus, Save, Send, Trash2 } from "lucide-react";
 import { useBusiness } from "@/components/providers/business-provider";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useToast } from "@/components/providers/toast-provider";
@@ -15,6 +15,7 @@ import { PlatformBadges } from "./post-badges";
 import { useApi } from "@/lib/use-api";
 import { listSocialAccounts } from "@/lib/api/social-accounts";
 import { getErrorMessage } from "@/lib/api/client";
+import { MAX_POST_IMAGE_SIZE_BYTES, MAX_POST_MEDIA_ITEMS, uploadPostImage } from "@/lib/api/uploads";
 import { publishPostSafely, savePost, schedulePostAt } from "@/lib/post-actions";
 import {
   INSTAGRAM_CAPTION_LIMIT,
@@ -68,6 +69,10 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
   const [confirm, setConfirm] = useState(null); // "publish" | "schedule"
   const [outcome, setOutcome] = useState(null);
   const [formError, setFormError] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [draggingFiles, setDraggingFiles] = useState(false);
+  const fileInputRef = useRef(null);
   const lockRef = useRef(false); // prevents double submits (and duplicate public posts)
 
   const editing = Boolean(post);
@@ -96,12 +101,97 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
     }));
   const setMedia = (i, value) =>
     setValues((v) => ({ ...v, mediaUrls: v.mediaUrls.map((m, idx) => (idx === i ? value : m)) }));
-  const addMedia = () => setValues((v) => (v.mediaUrls.length < 10 ? { ...v, mediaUrls: [...v.mediaUrls, ""] } : v));
+  const addMedia = () => setValues((v) => (v.mediaUrls.filter((url) => url.trim()).length < MAX_POST_MEDIA_ITEMS ? { ...v, mediaUrls: [...v.mediaUrls, ""] } : v));
   const removeMedia = (i) =>
     setValues((v) => {
       const next = v.mediaUrls.filter((_, idx) => idx !== i);
       return { ...v, mediaUrls: next.length ? next : [""] };
     });
+
+  async function uploadSelectedFiles(fileList) {
+    const selectedFiles = Array.from(fileList || []);
+    if (!selectedFiles.length) return;
+
+    setUploadError("");
+    const currentCount = values.mediaUrls.filter((url) => url.trim()).length;
+    const availableSlots = Math.max(0, MAX_POST_MEDIA_ITEMS - currentCount);
+
+    if (availableSlots === 0) {
+      setUploadError(`A post can contain up to ${MAX_POST_MEDIA_ITEMS} images.`);
+      return;
+    }
+
+    const candidates = selectedFiles.slice(0, availableSlots);
+    const validationMessages = [];
+
+    if (selectedFiles.length > availableSlots) {
+      validationMessages.push(`Only ${availableSlots} more image(s) can be added. The first ${availableSlots} file(s) will be processed.`);
+    }
+
+    const validFiles = candidates.filter((file) => {
+      if (!["image/jpeg", "image/png"].includes(file.type)) {
+        validationMessages.push(`${file.name}: choose a JPG or PNG image.`);
+        return false;
+      }
+      if (file.size > MAX_POST_IMAGE_SIZE_BYTES) {
+        validationMessages.push(`${file.name}: image must be 8 MB or smaller.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (!validFiles.length) {
+      setUploadError(validationMessages.join(" "));
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const results = await Promise.allSettled(
+        validFiles.map((file) => uploadPostImage(file, values.businessId))
+      );
+
+      const uploadedUrls = results
+        .filter((result) => result.status === "fulfilled")
+        .map((result) => result.value.url);
+
+      if (uploadedUrls.length) {
+        setValues((current) => {
+          const currentMedia = current.mediaUrls.map((url) => url.trim()).filter(Boolean);
+          const remainingSlots = Math.max(0, MAX_POST_MEDIA_ITEMS - currentMedia.length);
+          return {
+            ...current,
+            mediaUrls: [...currentMedia, ...uploadedUrls.slice(0, remainingSlots)],
+          };
+        });
+        toast.success(
+          uploadedUrls.length === 1 ? "Image uploaded" : `${uploadedUrls.length} images uploaded`,
+          { message: "Images are stored securely in Cloudinary." }
+        );
+      }
+
+      const failedUploads = results
+        .filter((result) => result.status === "rejected")
+        .map((result) => result.reason?.message || "An image couldn't be uploaded.");
+
+      const messages = [...validationMessages, ...failedUploads];
+      if (messages.length) setUploadError(messages.join(" "));
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  function handleFileInputChange(event) {
+    const files = event.currentTarget.files;
+    event.currentTarget.value = "";
+    uploadSelectedFiles(files);
+  }
+
+  function handleFileDrop(event) {
+    event.preventDefault();
+    setDraggingFiles(false);
+    if (!uploading && !busy) uploadSelectedFiles(event.dataTransfer.files);
+  }
 
   function check(intent) {
     const { errors: found } = validatePost(values, intent);
@@ -187,7 +277,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
               required
               value={values.businessId}
               onChange={set("businessId")}
-              disabled={editing}
+              disabled={editing || uploading || Boolean(busy)}
               error={errors.businessId}
               hint={editing ? "A post's business can't be changed after it's created." : undefined}
             >
@@ -249,8 +339,55 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
         </Card>
 
         <Card>
-          <CardHeader title="Media" description="Public image URLs. Instagram requires one; Facebook posts are text-only for now." />
+          <CardHeader title="Media" description="Upload JPG or PNG images to Cloudinary, or paste a public image URL. Instagram requires at least one image." />
           <CardBody className="space-y-4">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              multiple
+              className="sr-only"
+              disabled={uploading || Boolean(busy) || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}
+              onChange={handleFileInputChange}
+              aria-label="Choose images to upload"
+            />
+
+            <div
+              role="button"
+              tabIndex={uploading || busy || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS ? -1 : 0}
+              aria-disabled={uploading || Boolean(busy) || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}
+              onClick={() => {
+                if (!uploading && !busy && values.mediaUrls.filter((url) => url.trim()).length < MAX_POST_MEDIA_ITEMS) {
+                  fileInputRef.current?.click();
+                }
+              }}
+              onKeyDown={(event) => {
+                if ((event.key === "Enter" || event.key === " ") && !uploading && !busy) {
+                  event.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              onDragOver={(event) => {
+                event.preventDefault();
+                if (!uploading && !busy) setDraggingFiles(true);
+              }}
+              onDragLeave={() => setDraggingFiles(false)}
+              onDrop={handleFileDrop}
+              className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-5 py-8 text-center transition-colors ${draggingFiles ? "border-brand-600 bg-brand-50" : "border-line-strong bg-canvas hover:border-brand-500"} ${uploading || busy || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS ? "cursor-not-allowed opacity-60" : ""}`}
+            >
+              <CloudUpload className="mb-2 h-7 w-7 text-brand-700" aria-hidden />
+              <p className="text-sm font-semibold">Drag images here or browse files</p>
+              <p className="mt-1 text-xs text-muted">JPG or PNG · 8 MB max per image · up to {MAX_POST_MEDIA_ITEMS} images</p>
+            </div>
+
+            {uploading && (
+              <p role="status" className="flex items-center gap-2 text-sm text-muted">
+                <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden />
+                Uploading images to Cloudinary…
+              </p>
+            )}
+            {uploadError && <Alert tone="danger" title="Some images couldn't be added">{uploadError}</Alert>}
+
             {values.mediaUrls.map((url, i) => (
               <div key={i} className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
@@ -264,16 +401,18 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
                     error={i === 0 ? errors.mediaUrls : undefined}
                   />
                 </div>
-                <Button variant="ghost" size="sm" className="mt-1" onClick={() => removeMedia(i)} aria-label={`Remove media URL ${i + 1}`}>
+                <Button variant="ghost" size="sm" className="mt-1" onClick={() => removeMedia(i)} aria-label={`Remove media URL ${i + 1}`} disabled={uploading || Boolean(busy)}>
                   <Trash2 className="h-4 w-4" aria-hidden />
                 </Button>
               </div>
             ))}
             <div className="flex flex-wrap items-center gap-3">
-              <Button variant="secondary" size="sm" onClick={addMedia} disabled={values.mediaUrls.length >= 10}>
+              <Button variant="secondary" size="sm" onClick={addMedia} disabled={uploading || Boolean(busy) || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}>
                 <Plus className="h-4 w-4" aria-hidden /> Add another URL
               </Button>
-              <span className="flex items-center gap-1.5 text-xs text-muted"><ImageIcon className="h-3.5 w-3.5" aria-hidden /> File upload isn&apos;t available yet. Host your image and paste its link.</span>
+              <span className="flex items-center gap-1.5 text-xs text-muted">
+                <ImageIcon className="h-3.5 w-3.5" aria-hidden /> You can also paste a publicly accessible image URL.
+              </span>
             </div>
           </CardBody>
         </Card>
@@ -305,16 +444,16 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
         )}
 
         <div className="sticky bottom-0 -mx-4 flex flex-wrap items-center justify-end gap-2 border-t border-line bg-canvas/95 px-4 py-3 backdrop-blur sm:mx-0 sm:rounded-xl sm:border sm:bg-surface">
-          {onCancel && <Button variant="ghost" onClick={onCancel} disabled={Boolean(busy)}>Cancel</Button>}
-          <Button variant="secondary" onClick={saveDraft} loading={busy === "draft"} disabled={Boolean(busy)}>
+          {onCancel && <Button variant="ghost" onClick={onCancel} disabled={Boolean(busy) || uploading}>Cancel</Button>}
+          <Button variant="secondary" onClick={saveDraft} loading={busy === "draft"} disabled={Boolean(busy) || uploading}>
             <Save className="h-4 w-4" aria-hidden /> {editing || postId ? "Save changes" : "Save as draft"}
           </Button>
           {canSchedule && (
-            <Button variant="secondary" onClick={() => startConfirm("schedule")} disabled={Boolean(busy)}>
+            <Button variant="secondary" onClick={() => startConfirm("schedule")} disabled={Boolean(busy) || uploading}>
               <CalendarClock className="h-4 w-4" aria-hidden /> {post?.status === "scheduled" ? "Reschedule" : "Schedule"}
             </Button>
           )}
-          <Button onClick={() => startConfirm("publish")} disabled={Boolean(busy)}>
+          <Button onClick={() => startConfirm("publish")} disabled={Boolean(busy) || uploading}>
             <Send className="h-4 w-4" aria-hidden /> {post?.status === "failed" ? "Retry publishing" : "Publish now"}
           </Button>
         </div>
