@@ -11,7 +11,7 @@ const createReview = async (req, res) => {
       customerEmail,
       rating,
       comment,
-      publicDisplayConsent = false,
+      publicDisplayConsent,
     } = req.body || {};
 
     if (!businessId || !mongoose.Types.ObjectId.isValid(businessId)) {
@@ -75,10 +75,10 @@ const createReview = async (req, res) => {
       });
     }
 
-    if (typeof publicDisplayConsent !== "boolean") {
+    if (publicDisplayConsent !== true) {
       return res.status(400).json({
         success: false,
-        message: "publicDisplayConsent must be a boolean",
+        message: "You must agree to public testimonial display before submitting feedback",
       });
     }
 
