@@ -9,7 +9,7 @@ import { Card, CardBody, PageHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert, Badge, CardSkeleton, ErrorState } from "@/components/ui/feedback";
 import { useApi } from "@/lib/use-api";
-import { getFacebookConnectUrl, getInstagramConnectUrl, listSocialAccounts } from "@/lib/api/social-accounts";
+import { getFacebookConnectUrl, getInstagramConnectUrl, keepInstagramAccount as keepInstagramAccountApi, listSocialAccounts } from "@/lib/api/social-accounts";
 import { getErrorMessage } from "@/lib/api/client";
 import { formatDateTime } from "@/lib/format";
 
@@ -39,7 +39,7 @@ function connectionState(account) {
   return { tone: "neutral", label: account.status };
 }
 
-function PlatformCard({ platform, accounts, business, pending, onStart }) {
+function PlatformCard({ platform, accounts, business, pending, onStart, keeping, onKeep }) {
   const cfg = PLATFORM_CONFIG[platform];
   const Icon = cfg.icon;
   const list = accounts.filter((a) => a.platform === platform);
@@ -62,14 +62,67 @@ function PlatformCard({ platform, accounts, business, pending, onStart }) {
           <Badge tone={state.tone}>{connected && <CheckCircle2 className="h-3 w-3" aria-hidden />}{state.label}</Badge>
         </div>
 
-        {primary ? (
+        {platform === "instagram" ? (
+          list.length > 0 ? (
+            <div className="space-y-3">
+              {list.length > 1 && (
+                <p className="text-xs text-muted">
+                  Multiple Instagram connections were found. Choose the account this business should publish to; all other Instagram connections will be disconnected.
+                </p>
+              )}
+              <div className="space-y-2">
+                {list.map((account) => {
+                  const accountState = connectionState(account);
+                  return (
+                    <div key={account._id} className="rounded-lg border border-line p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold">
+                          {account.accountName || account.platformAccountId}
+                        </span>
+                        <Badge tone={accountState.tone}>
+                          {accountState.label}
+                        </Badge>
+                      </div>
+                      <dl className="mt-2 space-y-1 text-xs text-muted">
+                        <div className="flex justify-between gap-3">
+                          <dt>Connected</dt>
+                          <dd>{formatDateTime(account.connectedAt)}</dd>
+                        </div>
+                        {account.tokenExpiresAt && (
+                          <div className="flex justify-between gap-3">
+                            <dt>Access expires</dt>
+                            <dd>{formatDateTime(account.tokenExpiresAt)}</dd>
+                          </div>
+                        )}
+                      </dl>
+                      {list.length > 1 && (
+                        <div className="mt-3">
+                          <Button
+                            variant={account.status === "connected" ? "secondary" : "primary"}
+                            size="sm"
+                            onClick={() => onKeep(account._id)}
+                            loading={keeping === account._id}
+                            disabled={Boolean(keeping)}
+                          >
+                            Keep this account
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted">{cfg.note}</p>
+          )
+        ) : primary ? (
           <dl className="space-y-1.5 text-sm">
             <div className="flex justify-between gap-3"><dt className="text-muted">Account</dt><dd className="truncate font-medium">{primary.accountName || primary.platformAccountId}</dd></div>
             <div className="flex justify-between gap-3"><dt className="text-muted">Connected</dt><dd>{formatDateTime(primary.connectedAt)}</dd></div>
             {primary.tokenExpiresAt && (
               <div className="flex justify-between gap-3"><dt className="text-muted">Access expires</dt><dd>{formatDateTime(primary.tokenExpiresAt)}</dd></div>
             )}
-            {list.length > 1 && <p className="pt-1 text-xs text-muted">{list.length} accounts are linked to this business for this platform.</p>}
           </dl>
         ) : (
           <p className="text-sm text-muted">{cfg.note}</p>
@@ -89,6 +142,7 @@ function SocialAccountsContent({ business }) {
   const [starting, setStarting] = useState(null);
   const [flow, setFlow] = useState(null); // { platform, authUrl }
   const [refreshing, setRefreshing] = useState(false);
+  const [keeping, setKeeping] = useState(null);
 
   const accounts = data?.socialAccounts || [];
 
@@ -105,6 +159,21 @@ function SocialAccountsContent({ business }) {
       toast.error(`Couldn't start ${PLATFORM_CONFIG[platform].popupName} connection`, { message: getErrorMessage(e) });
     } finally {
       setStarting(null);
+    }
+  }
+
+  async function chooseInstagramAccount(socialAccountId) {
+    setKeeping(socialAccountId);
+    try {
+      await keepInstagramAccountApi(socialAccountId);
+      await reload();
+      toast.success("Instagram account updated", {
+        message: "Only the selected Instagram account is now active for this business. Other Instagram connections have been disconnected.",
+      });
+    } catch (e) {
+      toast.error("Couldn't update Instagram account", { message: getErrorMessage(e) });
+    } finally {
+      setKeeping(null);
     }
   }
 
@@ -154,7 +223,7 @@ function SocialAccountsContent({ business }) {
       {(data || (!loading && !error)) && (
         <div className="grid gap-4 md:grid-cols-2">
           <PlatformCard platform="facebook" accounts={accounts} business={business} pending={starting} onStart={start} />
-          <PlatformCard platform="instagram" accounts={accounts} business={business} pending={starting} onStart={start} />
+          <PlatformCard platform="instagram" accounts={accounts} business={business} pending={starting} onStart={start} keeping={keeping} onKeep={chooseInstagramAccount} />
 
           <Card className="border-dashed md:col-span-2">
             <CardBody className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
