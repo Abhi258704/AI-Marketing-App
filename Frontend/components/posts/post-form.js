@@ -15,7 +15,7 @@ import { PlatformBadges } from "./post-badges";
 import { useApi } from "@/lib/use-api";
 import { listSocialAccounts } from "@/lib/api/social-accounts";
 import { getErrorMessage } from "@/lib/api/client";
-import { MAX_POST_MEDIA_ITEMS, uploadPostImage } from "@/lib/api/uploads";
+import { MAX_POST_IMAGE_SIZE_BYTES, MAX_POST_MEDIA_ITEMS, uploadPostImage } from "@/lib/api/uploads";
 import { publishPostSafely, savePost, schedulePostAt } from "@/lib/post-actions";
 import {
   INSTAGRAM_CAPTION_LIMIT,
@@ -101,7 +101,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
     }));
   const setMedia = (i, value) =>
     setValues((v) => ({ ...v, mediaUrls: v.mediaUrls.map((m, idx) => (idx === i ? value : m)) }));
-  const addMedia = () => setValues((v) => (v.mediaUrls.length < 10 ? { ...v, mediaUrls: [...v.mediaUrls, ""] } : v));
+  const addMedia = () => setValues((v) => (v.mediaUrls.filter((url) => url.trim()).length < MAX_POST_MEDIA_ITEMS ? { ...v, mediaUrls: [...v.mediaUrls, ""] } : v));
   const removeMedia = (i) =>
     setValues((v) => {
       const next = v.mediaUrls.filter((_, idx) => idx !== i);
@@ -133,7 +133,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
         validationMessages.push(`${file.name}: choose a JPG or PNG image.`);
         return false;
       }
-      if (file.size > 8 * 1024 * 1024) {
+      if (file.size > MAX_POST_IMAGE_SIZE_BYTES) {
         validationMessages.push(`${file.name}: image must be 8 MB or smaller.`);
         return false;
       }
@@ -407,7 +407,7 @@ export function PostForm({ post, defaultBusinessId, onDone, onCancel }) {
               </div>
             ))}
             <div className="flex flex-wrap items-center gap-3">
-              <Button variant="secondary" size="sm" onClick={addMedia} disabled={uploading || values.mediaUrls.length >= MAX_POST_MEDIA_ITEMS}>
+              <Button variant="secondary" size="sm" onClick={addMedia} disabled={uploading || values.mediaUrls.filter((url) => url.trim()).length >= MAX_POST_MEDIA_ITEMS}>
                 <Plus className="h-4 w-4" aria-hidden /> Add another URL
               </Button>
               <span className="flex items-center gap-1.5 text-xs text-muted">
