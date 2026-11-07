@@ -62,7 +62,7 @@ const generateMarketingImage = async ({ prompt }) => {
         throw new CloudflareAiError("Cloudflare did not return a generated image.", 502);
     }
 
-    imageBase64 = imageBase64.replace(/^data:image\\/jpeg;base64,/i, "");
+    imageBase64 = imageBase64.replace(/^data:image\/jpeg;base64,/i, "");
     const buffer = Buffer.from(imageBase64, "base64");
     if (!buffer.length) {
         throw new CloudflareAiError("Cloudflare returned an empty image.", 502);

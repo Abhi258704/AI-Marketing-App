@@ -187,8 +187,6 @@ async function releaseImageUsage(scope, scopeId, dayKey) {
 const generateImage = async (req, res) => {
     const dayKey = getUtcDayKey();
     const userId = String(req.user._id);
-    let reservedGlobal = false;
-    let reservedUser = false;
 
     try {
         const {
@@ -272,7 +270,6 @@ const generateImage = async (req, res) => {
                 message: "Today's shared image-generation allowance has been used. Please try again after 00:00 UTC.",
             });
         }
-        reservedGlobal = true;
 
         const userUsage = await reserveImageUsage(
             "user",
@@ -283,14 +280,12 @@ const generateImage = async (req, res) => {
 
         if (!userUsage) {
             await releaseImageUsage("global", "all-users", dayKey);
-            reservedGlobal = false;
             return res.status(429).json({
                 success: false,
                 code: "USER_DAILY_IMAGE_LIMIT",
                 message: `You have reached your ${IMAGE_DAILY_USER_LIMIT}-image daily limit. Please try again after 00:00 UTC.`,
             });
         }
-        reservedUser = true;
 
         const promptParts = [
             "Create one original, polished commercial marketing image for a small business social media campaign.",
