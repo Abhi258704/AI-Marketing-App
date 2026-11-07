@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { TEMP_MEDIA_ROOT } from "./services/media-storage.service.js";
 
 import authRoutes from "./routes/auth.routes.js";
 import userRoutes from "./routes/user.routes.js";
@@ -25,6 +26,16 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+
+// Temporary previews are served from Backend/public/temp. Files are promoted to Cloudinary
+// when their draft is scheduled or published.
+app.use("/temp", express.static(TEMP_MEDIA_ROOT, {
+  etag: false,
+  maxAge: 0,
+  setHeaders(response) {
+    response.setHeader("Cache-Control", "no-store");
+  },
+}));
 
 // Health check endpoint for uptime monitoring
 app.get("/health", (_req, res) => {

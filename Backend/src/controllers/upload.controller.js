@@ -1,85 +1,73 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
+import fs from "node:fs/promises";
+import path from "node:path";
 import mongoose from "mongoose";
 import Business from "../models/business.model.js";
+import { TEMP_MEDIA_ROOT } from "../services/media-storage.service.js";
 
-const ALLOWED_IMAGE_FORMATS = "jpg,jpeg,png";
 const MAX_IMAGE_SIZE_BYTES = 8 * 1024 * 1024;
 
-function createCloudinarySignature(params, apiSecret) {
-    const payload = Object.keys(params)
-        .sort()
-        .map((key) => `${key}=${params[key]}`)
-        .join("&");
-
-    return createHash("sha1")
-        .update(`${payload}${apiSecret}`)
-        .digest("hex");
-}
-
-const createImageUploadSignature = async (req, res) => {
+const stageTemporaryImage = async (req, res) => {
     try {
-        const { businessId } = req.body || {};
+        const { businessId } = req.params;
 
         if (!businessId || !mongoose.isValidObjectId(businessId)) {
-            return res.status(400).json({
-                success: false,
-                message: "A valid businessId is required",
-            });
+            return res.status(400).json({ success: false, message: "A valid businessId is required" });
+        }
+
+        if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+            return res.status(400).json({ success: false, message: "Choose an image file before uploading" });
+        }
+
+        if (req.body.length > MAX_IMAGE_SIZE_BYTES) {
+            return res.status(413).json({ success: false, message: "Each image must be 8 MB or smaller" });
         }
 
         const business = await Business.findOne({
             _id: businessId,
             ownerId: req.user._id,
             isActive: true,
-        }).select("_id");
+        }).select("_id ownerId");
 
         if (!business) {
-            return res.status(404).json({
+            return res.status(404).json({ success: false, message: "Business not found" });
+        }
+
+        // Validate the actual file signature instead of trusting the browser MIME type.
+        const buffer = req.body;
+        const isPng = buffer.length >= 8 && buffer.subarray(0, 8).equals(
+            Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+        );
+        const isJpeg = buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+
+        if (!isPng && !isJpeg) {
+            return res.status(415).json({
                 success: false,
-                message: "Business not found",
+                message: "Unsupported file. Choose a valid JPG or PNG image.",
             });
         }
 
-        const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-        const apiKey = process.env.CLOUDINARY_API_KEY;
-        const apiSecret = process.env.CLOUDINARY_API_SECRET;
+        const ownerId = String(req.user._id);
+        const ownedBusinessId = String(business._id);
+        const folder = path.join(TEMP_MEDIA_ROOT, ownerId, ownedBusinessId);
+        const fileName = `${randomUUID()}.${isPng ? "png" : "jpg"}`;
 
-        if (!cloudName || !apiKey || !apiSecret) {
-            return res.status(503).json({
-                success: false,
-                message: "Image uploads are not configured. Add the Cloudinary credentials to the backend environment.",
-            });
-        }
+        await fs.mkdir(folder, { recursive: true });
+        await fs.writeFile(path.join(folder, fileName), buffer, { flag: "wx" });
 
-        const timestamp = Math.round(Date.now() / 1000);
-        const params = {
-            timestamp,
-            folder: `ai-marketing-platform/${req.user._id}/${business._id}`,
-            public_id: `image_${randomUUID()}`,
-            allowed_formats: ALLOWED_IMAGE_FORMATS,
-            overwrite: false,
-        };
-
-        const signature = createCloudinarySignature(params, apiSecret);
-
-        return res.status(200).json({
+        return res.status(201).json({
             success: true,
-            cloudName,
-            apiKey,
-            signature,
-            params,
+            message: "Image saved in temporary storage",
+            mediaUrl: `/temp/${ownerId}/${ownedBusinessId}/${fileName}`,
             maxFileSizeBytes: MAX_IMAGE_SIZE_BYTES,
         });
     } catch (error) {
-        console.error("Create image upload signature error:", error.message || error);
-
+        console.error("Stage temporary image error:", error.message || error);
         return res.status(500).json({
             success: false,
-            message: "Failed to prepare image upload",
+            message: "Could not save the image in temporary storage",
         });
     }
 };
 
-export {
-    createImageUploadSignature,
-};
+export { stageTemporaryImage };
