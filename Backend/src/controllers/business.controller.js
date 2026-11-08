@@ -113,7 +113,7 @@ const updateBusiness = async (req, res) => {
         logoUrl,
       },
       {
-        new: true,
+        returnDocument: "after",
         runValidators: true,
       }
     );

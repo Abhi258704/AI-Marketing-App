@@ -67,7 +67,7 @@ const syncInstagramAnalytics = async ({ businessId, socialAccount }) => {
             },
             {
                 upsert: true,
-                new: true,
+                returnDocument: "after",
                 runValidators: true,
             }
         );

@@ -103,7 +103,7 @@ const facebookCallback = async (req, res) => {
                 connectedAt: new Date(),
             },
             {
-                new: true,
+                returnDocument: "after",
                 upsert: true,
             }
         );
