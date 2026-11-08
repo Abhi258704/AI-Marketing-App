@@ -3,6 +3,7 @@ import authMiddleware from "../middleware/auth.middleware.js";
 import {
   createSocialAccount,
   getBusinessSocialAccounts,
+  keepInstagramAccount,
   instagramCallback,
   connectInstagram,
 } from "../controllers/socialAccount.controller.js";
@@ -20,6 +21,12 @@ router.get(
   "/business/:businessId",
   authMiddleware,
   getBusinessSocialAccounts
+);
+
+router.patch(
+  "/instagram/:socialAccountId/keep",
+  authMiddleware,
+  keepInstagramAccount
 );
 
 router.get("/instagram/callback", instagramCallback);

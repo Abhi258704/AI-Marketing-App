@@ -1,8 +1,27 @@
+import mongoose from "mongoose";
 import SocialAccount from "../models/socialAccount.model.js";
 import Business from "../models/business.model.js";
 import axios from "axios";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+
+async function keepOnlyInstagramAccount(businessId, socialAccountId) {
+    await SocialAccount.updateMany(
+        {
+            businessId,
+            platform: "instagram",
+            _id: { $ne: socialAccountId },
+        },
+        {
+            $set: {
+                status: "disconnected",
+                accessToken: null,
+                refreshToken: null,
+                tokenExpiresAt: null,
+            },
+        }
+    );
+}
 
 // Create Social Account
 const createSocialAccount = async (req, res) => {
@@ -35,16 +54,36 @@ const createSocialAccount = async (req, res) => {
             });
         }
 
-        const socialAccount = await SocialAccount.create({
+        let socialAccount = await SocialAccount.findOne({
             businessId,
             platform,
             platformAccountId,
-            accountName,
-            accessToken,
-            refreshToken,
-            tokenExpiresAt,
-            connectedAt: new Date(),
         });
+
+        if (socialAccount) {
+            socialAccount.accountName = accountName || socialAccount.accountName;
+            socialAccount.accessToken = accessToken || socialAccount.accessToken;
+            socialAccount.refreshToken = refreshToken || socialAccount.refreshToken;
+            socialAccount.tokenExpiresAt = tokenExpiresAt || socialAccount.tokenExpiresAt;
+            socialAccount.status = "connected";
+            socialAccount.connectedAt = new Date();
+            await socialAccount.save();
+        } else {
+            socialAccount = await SocialAccount.create({
+                businessId,
+                platform,
+                platformAccountId,
+                accountName,
+                accessToken,
+                refreshToken,
+                tokenExpiresAt,
+                connectedAt: new Date(),
+            });
+        }
+
+        if (platform === "instagram") {
+            await keepOnlyInstagramAccount(businessId, socialAccount._id);
+        }
 
         const safeSocialAccount = socialAccount.toObject();
 
@@ -93,6 +132,78 @@ const getBusinessSocialAccounts = async (req, res) => {
 
         return res.status(500).json({
             message: "Failed to fetch social accounts",
+        });
+    }
+};
+
+const keepInstagramAccount = async (req, res) => {
+    try {
+        const { socialAccountId } = req.params;
+        if (!socialAccountId || !mongoose.isValidObjectId(socialAccountId)) {
+            return res.status(400).json({
+                success: false,
+                message: "A valid Instagram social account ID is required",
+            });
+        }
+
+        const socialAccount = await SocialAccount.findOne({
+            _id: socialAccountId,
+            platform: "instagram",
+        });
+
+        if (!socialAccount) {
+            return res.status(404).json({
+                success: false,
+                message: "Instagram account not found",
+            });
+        }
+
+        const business = await Business.findOne({
+            _id: socialAccount.businessId,
+            ownerId: req.user._id,
+            isActive: true,
+        });
+
+        if (!business) {
+            return res.status(404).json({
+                success: false,
+                message: "Business not found",
+            });
+        }
+
+        if (
+            !socialAccount.accessToken ||
+            (socialAccount.tokenExpiresAt && socialAccount.tokenExpiresAt <= new Date())
+        ) {
+            return res.status(409).json({
+                success: false,
+                message: "This Instagram account needs to be reconnected before it can be selected.",
+            });
+        }
+
+        await keepOnlyInstagramAccount(business._id, socialAccount._id);
+        socialAccount.status = "connected";
+        await socialAccount.save();
+
+        return res.status(200).json({
+            success: true,
+            message: "This Instagram account is now the only active account for this business",
+            socialAccount: {
+                _id: socialAccount._id,
+                businessId: socialAccount.businessId,
+                platform: socialAccount.platform,
+                platformAccountId: socialAccount.platformAccountId,
+                accountName: socialAccount.accountName,
+                status: socialAccount.status,
+                connectedAt: socialAccount.connectedAt,
+                tokenExpiresAt: socialAccount.tokenExpiresAt,
+            },
+        });
+    } catch (error) {
+        console.error("Keep Instagram account error:", error.message || error);
+        return res.status(500).json({
+            success: false,
+            message: "Could not update the active Instagram account",
         });
     }
 };
@@ -249,7 +360,7 @@ const instagramCallback = async (req, res) => {
             socialAccount = await existingAccount.save();
         }
 
-        // Create new account
+        // Create new account when this Instagram ID has not been linked before.
         else {
             socialAccount = await SocialAccount.create({
                 businessId,
@@ -262,6 +373,10 @@ const instagramCallback = async (req, res) => {
                 connectedAt: new Date(),
             });
         }
+
+        // A business may publish to only one Instagram account. Reauthorization replaces
+        // the previous active account instead of leaving multiple accounts publishable.
+        await keepOnlyInstagramAccount(businessId, socialAccount._id);
 
         return res.status(200).json({
             success: true,
@@ -357,6 +472,7 @@ const connectInstagram = async (req, res) => {
 export {
     createSocialAccount,
     getBusinessSocialAccounts,
+    keepInstagramAccount,
     instagramCallback,
     connectInstagram,
 };
