@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ClipboardCheck,
   FileText,
+  Globe,
   LayoutDashboard,
   Link2,
   ListChecks,
@@ -33,6 +34,7 @@ export const NAV_GROUPS = [
     items: [
       { href: "/audits", label: "Business audit", icon: ClipboardCheck },
       { href: "/seo", label: "Website SEO", icon: Search },
+      { href: "/seo/search-console", label: "Search Console", icon: Globe },
       { href: "/recommendations", label: "Recommendations", icon: ListChecks },
       { href: "/analytics", label: "Analytics", icon: BarChart3 },
     ],
