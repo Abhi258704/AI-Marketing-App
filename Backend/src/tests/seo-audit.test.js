@@ -8,6 +8,8 @@ test("normalizes a domain to HTTPS and removes fragments", () => {
 
 test("rejects non-web protocols and credential-bearing URLs", () => {
   assert.throws(() => normalizeWebsiteUrl("file:///etc/passwd"));
+  assert.throws(() => normalizeWebsiteUrl("ftp://example.com"));
+  assert.throws(() => normalizeWebsiteUrl("javascript://example.com"));
   assert.throws(() => normalizeWebsiteUrl("https://user:pass@example.com"));
 });
 

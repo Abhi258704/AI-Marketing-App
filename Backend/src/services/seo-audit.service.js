@@ -14,6 +14,10 @@ const MAX_LINKS_PER_PAGE = 150;
 export function normalizeWebsiteUrl(input) {
   const raw = String(input || "").trim();
   if (!raw) throw new Error("Add a website URL to your business profile first.");
+  const scheme = raw.match(/^([a-z][a-z0-9+.-]*):\/\//i);
+  if (scheme && !["http", "https"].includes(scheme[1].toLowerCase())) {
+    throw new Error("Only HTTP and HTTPS websites can be audited.");
+  }
   const candidate = /^https?:\/\//i.test(raw) ? raw : "https://" + raw;
   let url;
   try { url = new URL(candidate); } catch { throw new Error("Enter a valid website URL, such as https://example.com."); }
@@ -97,13 +101,15 @@ function assertSafeUrl(url) {
   if (version && !isPublicIp(hostname)) throw new Error("Private or reserved IP addresses cannot be audited.");
 }
 
-function safeLookup(hostname, _options, callback) {
+function safeLookup(hostname, options, callback) {
   dns.lookup(hostname, { all: true, verbatim: true }, (error, addresses) => {
     if (error) return callback(error);
     if (!addresses?.length || addresses.some((item) => !isPublicIp(item.address))) {
       return callback(new Error("The website resolves to a private or reserved IP address."));
     }
-    callback(null, addresses[0].address, addresses[0].family);
+    const selected = addresses[0];
+    if (options?.all) return callback(null, [selected]);
+    return callback(null, selected.address, selected.family);
   });
 }
 
