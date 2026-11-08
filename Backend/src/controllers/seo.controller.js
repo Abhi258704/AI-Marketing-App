@@ -3,6 +3,8 @@ import Business from "../models/business.model.js";
 import WebsiteAudit from "../models/websiteAudit.model.js";
 import { normalizeWebsiteUrl } from "../services/seo-audit.service.js";
 
+const FREE_AUDITS_PER_BUSINESS_PER_UTC_DAY = 10;
+
 async function ownedBusiness(businessId, userId) {
   if (!mongoose.isValidObjectId(businessId)) return null;
   return Business.findOne({ _id: businessId, ownerId: userId, isActive: true });
@@ -39,9 +41,9 @@ export async function createWebsiteAudit(req, res) {
       userId: req.user._id,
       createdAt: { $gte: utcDayStart },
     });
-    if (auditsToday >= 3) {
+    if (auditsToday >= FREE_AUDITS_PER_BUSINESS_PER_UTC_DAY) {
       return res.status(429).json({
-        message: "The free audit limit is 3 runs per business per UTC day. Please try again tomorrow.",
+        message: `The free audit limit is ${FREE_AUDITS_PER_BUSINESS_PER_UTC_DAY} runs per business per UTC day. Please try again tomorrow.`,
       });
     }
     const audit = await WebsiteAudit.create({

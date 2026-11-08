@@ -38,7 +38,7 @@ Do not commit real keys. Configure them in the local backend environment and the
 - Redirects must remain on the same hostname and use HTTP or HTTPS standard ports.
 - DNS results are checked and private, loopback, link-local, reserved and metadata-style IP ranges are blocked.
 - Only one queued/running audit is permitted per business.
-- Maximum of three new audit runs per business per UTC day.
+- Maximum of ten new audit runs per business per UTC day.
 - The crawler does not bypass robots.txt rules.
 - MongoDB stores the queue; the existing backend process claims one audit at a time. No separate Redis service is required for this first milestone.
 
