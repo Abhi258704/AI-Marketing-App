@@ -140,7 +140,7 @@ export async function searchConsoleOAuthCallback(req, res) {
           lastError: null,
         },
       },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: "after", upsert: true, runValidators: true }
     );
 
     if (accountChanged) {
@@ -245,7 +245,7 @@ export async function selectSearchConsoleProperty(req, res) {
           selectedAt: new Date(),
         },
       },
-      { new: true, upsert: true, runValidators: true }
+      { returnDocument: "after", upsert: true, runValidators: true }
     );
     await SearchConsoleReport.deleteMany({ businessId: business._id });
     return res.status(200).json({
@@ -303,7 +303,7 @@ export async function getSearchConsolePerformance(req, res) {
             expiresAt,
           },
         },
-        { new: true, upsert: true, runValidators: true }
+        { returnDocument: "after", upsert: true, runValidators: true }
       ).lean();
     }
 
