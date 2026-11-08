@@ -33,10 +33,15 @@ export const NAV_GROUPS = [
     label: "Grow",
     items: [
       { href: "/audits", label: "Business audit", icon: ClipboardCheck },
-      { href: "/seo", label: "Website SEO", icon: Search },
-      { href: "/seo/search-console", label: "Search Console", icon: Globe },
       { href: "/recommendations", label: "Recommendations", icon: ListChecks },
       { href: "/analytics", label: "Analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Website",
+    items: [
+      { href: "/seo", label: "Website health", icon: Search },
+      { href: "/seo/search-console", label: "Google search performance", icon: Globe },
     ],
   },
   {
