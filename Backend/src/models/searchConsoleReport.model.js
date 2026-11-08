@@ -29,7 +29,7 @@ const searchConsoleReportSchema = new mongoose.Schema({
   countries: { type: [metricRowSchema], default: [] },
   devices: { type: [metricRowSchema], default: [] },
   fetchedAt: { type: Date, default: Date.now },
-  expiresAt: { type: Date, required: true, index: true },
+  expiresAt: { type: Date, required: true },
 }, { timestamps: true });
 
 searchConsoleReportSchema.index({ businessId: 1, startDate: 1, endDate: 1 }, { unique: true });
