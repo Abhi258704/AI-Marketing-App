@@ -154,7 +154,7 @@ async function reserveImageUsage(scope, scopeId, dayKey, limit) {
     const updated = await AiImageUsage.findOneAndUpdate(
         { ...filter, count: { $lt: limit } },
         { $inc: { count: 1 } },
-        { new: true }
+        { returnDocument: "after" }
     );
 
     if (updated) return updated;
@@ -174,7 +174,7 @@ async function reserveImageUsage(scope, scopeId, dayKey, limit) {
     return AiImageUsage.findOneAndUpdate(
         { ...filter, count: { $lt: limit } },
         { $inc: { count: 1 } },
-        { new: true }
+        { returnDocument: "after" }
     );
 }
 
