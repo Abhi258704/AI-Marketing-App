@@ -19,11 +19,11 @@ import notificationRoutes from "./routes/notification.routes.js";
 import analyticsRoutes from "./routes/analytics.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
+import seoRoutes from "./routes/seo.routes.js";
 
 dotenv.config();
 
 const app = express();
-
 app.use(cors());
 app.use(express.json({ limit: "12mb" }));
 
@@ -37,7 +37,6 @@ app.use("/temp", express.static(TEMP_MEDIA_ROOT, {
   },
 }));
 
-// Health check endpoint for uptime monitoring
 app.get("/health", (_req, res) => {
   res.status(200).json({
     status: "ok",
@@ -47,53 +46,24 @@ app.get("/health", (_req, res) => {
   });
 });
 
+app.get("/", (_req, res) => res.json({ message: "AI Marketing Platform API is running" }));
 
-app.get("/", (req, res) => {
-  res.json({
-    message: "AI Marketing Platform API is running",
-  });
-});
-
-
-// Routes
 app.use("/api/auth", authRoutes);
-
 app.use("/api/users", userRoutes);
-
 app.use("/api/businesses", businessRoutes);
-
 app.use("/api/social-accounts", socialAccountRoutes);
-
 app.use("/api/ai", aiRoutes);
-
 app.use("/api/posts", postRoutes);
-
 app.use("/api/post-publications", postPublicationRoutes);
-
 app.use("/api/instagram", instagramRoutes);
-
 app.use("/api/facebook", facebookRoutes);
-
 app.use("/api/publish", publishRoutes);
-
 app.use("/api/recommendations", recommendationRoutes);
-
 app.use("/api/notifications", notificationRoutes);
-
 app.use("/api/analytics", analyticsRoutes);
-
 app.use("/api/reviews", reviewRoutes);
-
 app.use("/api/uploads", uploadRoutes);
-
-
-
-
-
-
-
+app.use("/api/seo", seoRoutes);
 
 app.use(errorHandler);
-
-
 export default app;

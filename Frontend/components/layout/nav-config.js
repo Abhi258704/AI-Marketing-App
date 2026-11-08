@@ -10,6 +10,7 @@ import {
   ListChecks,
   MessageSquareText,
   QrCode,
+  Search,
   Settings,
   Sparkles,
 } from "lucide-react";
@@ -30,7 +31,8 @@ export const NAV_GROUPS = [
   {
     label: "Grow",
     items: [
-      { href: "/audits", label: "Audits", icon: ClipboardCheck },
+      { href: "/audits", label: "Business audit", icon: ClipboardCheck },
+      { href: "/seo", label: "Website SEO", icon: Search },
       { href: "/recommendations", label: "Recommendations", icon: ListChecks },
       { href: "/analytics", label: "Analytics", icon: BarChart3 },
     ],
