@@ -86,6 +86,9 @@ function SeoContent({ business }) {
           </Button>
         }
       />
+      <Alert tone="info" className="mb-5" title="Coverage in this first version">
+        The crawler checks HTML delivered by the website server. Pages that rely on client-side JavaScript to render their main content may be only partially analysed. Browser-rendered crawling can be added as a later phase without introducing a paid SEO data provider.
+      </Alert>
 
       {!business.website && (
         <Alert tone="warning" title="Add a website first">
