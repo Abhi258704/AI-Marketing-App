@@ -19,6 +19,31 @@ export async function createWebsiteAudit(req, res) {
     }
     const requestedLimit = Number(req.body?.maxPages || 100);
     const maxPages = Number.isFinite(requestedLimit) ? Math.max(10, Math.min(200, Math.round(requestedLimit))) : 100;
+
+    const activeAudit = await WebsiteAudit.findOne({
+      businessId: business._id,
+      userId: req.user._id,
+      status: { $in: ["queued", "running"] },
+    }).select("_id");
+    if (activeAudit) {
+      return res.status(409).json({
+        message: "An audit is already queued or running for this business.",
+        auditId: activeAudit._id,
+      });
+    }
+
+    const utcDayStart = new Date();
+    utcDayStart.setUTCHours(0, 0, 0, 0);
+    const auditsToday = await WebsiteAudit.countDocuments({
+      businessId: business._id,
+      userId: req.user._id,
+      createdAt: { $gte: utcDayStart },
+    });
+    if (auditsToday >= 3) {
+      return res.status(429).json({
+        message: "The free audit limit is 3 runs per business per UTC day. Please try again tomorrow.",
+      });
+    }
     const audit = await WebsiteAudit.create({
       businessId: business._id,
       userId: req.user._id,

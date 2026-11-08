@@ -12,7 +12,7 @@ test("rejects non-web protocols and credential-bearing URLs", () => {
 });
 
 test("blocks private, loopback and link-local addresses", () => {
-  for (const address of ["127.0.0.1", "10.0.0.2", "172.16.0.1", "192.168.1.2", "169.254.169.254", "::1", "fc00::1", "fe80::1"]) {
+  for (const address of ["127.0.0.1", "10.0.0.2", "172.16.0.1", "192.168.1.2", "169.254.169.254", "::1", "fc00::1", "fe80::1", "::ffff:127.0.0.1", "::ffff:7f00:1", "::ffff:192.168.1.10"]) {
     assert.equal(isPublicIp(address), false, address);
   }
   assert.equal(isPublicIp("8.8.8.8"), true);

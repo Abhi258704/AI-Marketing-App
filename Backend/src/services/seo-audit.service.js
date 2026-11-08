@@ -40,23 +40,55 @@ export function isPublicIp(address) {
     if (a === 203 && b === 0) return false;
     return true;
   }
-  if (version === 6) {
-    const value = address.toLowerCase();
-    if (value.startsWith("::ffff:")) {
-      const mapped = value.slice(7);
-      if (isIP(mapped) === 4) return isPublicIp(mapped);
-    }
-    if (value === "::" || value === "::1") return false;
-    if (value.startsWith("fc") || value.startsWith("fd")) return false;
-    if (/^fe[89ab]/.test(value) || value.startsWith("ff") || value.startsWith("2001:db8")) return false;
-    return true;
-  }
-  return false;
-}
+  if (version !== 6) return false;
 
+  let value = address.toLowerCase().split("%")[0];
+  const dotted = value.match(/(\d{1,3}(?:\.\d{1,3}){3})$/);
+  if (dotted) {
+    const octets = dotted[1].split(".").map(Number);
+    if (octets.some((part) => part > 255)) return false;
+    const high = ((octets[0] << 8) | octets[1]).toString(16);
+    const low = ((octets[2] << 8) | octets[3]).toString(16);
+    value = value.slice(0, -dotted[1].length) + high + ":" + low;
+  }
+
+  const halves = value.split("::");
+  if (halves.length > 2) return false;
+  const left = halves[0] ? halves[0].split(":") : [];
+  const right = halves.length === 2 && halves[1] ? halves[1].split(":") : [];
+  const missing = 8 - left.length - right.length;
+  if ((halves.length === 1 && missing !== 0) || missing < 0) return false;
+  const words = [...left, ...Array(missing).fill("0"), ...right].map((part) => parseInt(part || "0", 16));
+  if (words.length !== 8 || words.some((part) => !Number.isFinite(part) || part < 0 || part > 65535)) return false;
+
+  const firstSixZero = words.slice(0, 6).every((part) => part === 0);
+  if (firstSixZero && words[6] === 0 && words[7] === 1) return false; // ::1
+  if (firstSixZero && words[6] === 0 && words[7] === 0) return false; // ::
+  if (words.slice(0, 5).every((part) => part === 0) && words[5] === 0xffff) {
+    const high = words[6], low = words[7];
+    const ipv4 = [(high >> 8) & 255, high & 255, (low >> 8) & 255, low & 255].join(".");
+    return isPublicIp(ipv4);
+  }
+  if (firstSixZero) {
+    const high = words[6], low = words[7];
+    const ipv4 = [(high >> 8) & 255, high & 255, (low >> 8) & 255, low & 255].join(".");
+    return isPublicIp(ipv4);
+  }
+  if ((words[0] & 0xfe00) === 0xfc00) return false; // Unique-local IPv6
+  if ((words[0] & 0xffc0) === 0xfe80) return false; // Link-local IPv6
+  if ((words[0] & 0xff00) === 0xff00) return false; // Multicast IPv6
+  if (words[0] === 0x2001 && (words[1] === 0x0db8 || words[1] === 0x0010)) return false; // Documentation / ORCHID
+  if (words[0] === 0x0064 && words[1] === 0xff9b) {
+    const high = words[6], low = words[7];
+    const ipv4 = [(high >> 8) & 255, high & 255, (low >> 8) & 255, low & 255].join(".");
+    return isPublicIp(ipv4);
+  }
+  return true;
+}
 function assertSafeUrl(url) {
   if (!["http:", "https:"].includes(url.protocol)) throw new Error("Only HTTP and HTTPS targets are allowed.");
   if (url.username || url.password) throw new Error("URLs containing credentials are not allowed.");
+  if (url.port && !["80", "443"].includes(url.port)) throw new Error("Non-standard ports cannot be audited.");
   const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (hostname === "localhost" || hostname.endsWith(".localhost") || hostname.endsWith(".local") || hostname.endsWith(".internal") || hostname.endsWith(".test")) {
     throw new Error("Private or local network targets cannot be audited.");
@@ -131,14 +163,15 @@ function safeRequest(url, { method = "GET", body = null, headers = {}, maxBytes 
 
 async function requestWithRedirects(input, options = {}) {
   const first = new URL(input);
-  const allowedOrigin = first.origin;
+  const allowedHostname = first.hostname.toLowerCase();
   let current = first;
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     const result = await safeRequest(current, options);
     const location = result.headers.location;
     if (result.statusCode >= 300 && result.statusCode < 400 && location) {
       const next = new URL(location, current);
-      if (next.origin !== allowedOrigin) throw new Error("The website redirects to another host. Cross-domain redirects are not followed.");
+      if (next.hostname.toLowerCase() !== allowedHostname) throw new Error("The website redirects to another host. Cross-domain redirects are not followed.");
+      assertSafeUrl(next);
       current = next;
       continue;
     }
