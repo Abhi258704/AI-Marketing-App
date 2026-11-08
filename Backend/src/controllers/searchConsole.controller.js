@@ -102,13 +102,6 @@ export async function searchConsoleOAuthCallback(req, res) {
     const tokens = await exchangeSearchConsoleCode(code);
     const existing = await SearchConsoleConnection.findOne({ userId: stateRecord.userId })
       .select("+refreshTokenEncrypted");
-    let refreshToken = tokens.refresh_token || null;
-    if (!refreshToken && existing?.refreshTokenEncrypted) {
-      refreshToken = decryptRefreshToken(existing.refreshTokenEncrypted);
-    }
-    if (!refreshToken) {
-      return callbackRedirect(res, "error", "Google did not provide offline access. Retry and approve the requested access.");
-    }
 
     let profile = {};
     if (tokens.access_token) {
@@ -126,6 +119,14 @@ export async function searchConsoleOAuthCallback(req, res) {
     const previousEmail = existing?.googleEmail?.toLowerCase() || null;
     const nextEmail = profile.email?.toLowerCase() || previousEmail;
     const accountChanged = Boolean(previousEmail && nextEmail && previousEmail !== nextEmail);
+
+    let refreshToken = tokens.refresh_token || null;
+    if (!refreshToken && existing?.refreshTokenEncrypted && !accountChanged) {
+      refreshToken = decryptRefreshToken(existing.refreshTokenEncrypted);
+    }
+    if (!refreshToken) {
+      return callbackRedirect(res, "error", "Google did not provide a new offline token. Retry and approve access for the selected Google account.");
+    }
     const connection = await SearchConsoleConnection.findOneAndUpdate(
       { userId: stateRecord.userId },
       {

@@ -18,7 +18,7 @@ export function propertyMatchesWebsite(siteUrl, website) {
   try {
     const property = new URL(siteUrl);
     if (!["http:", "https:"].includes(property.protocol)) return false;
-    if (property.hostname.toLowerCase() !== target.hostname.toLowerCase()) return false;
+    if (property.origin !== target.origin) return false;
     const propertyPath = property.pathname.endsWith("/") ? property.pathname : property.pathname + "/";
     const targetPath = target.pathname.endsWith("/") ? target.pathname : target.pathname + "/";
     return targetPath.startsWith(propertyPath);

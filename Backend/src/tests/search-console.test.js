@@ -22,6 +22,7 @@ test("matches URL-prefix properties on the same host and path", () => {
   assert.equal(propertyMatchesWebsite("https://www.example.com/blog/", "https://www.example.com/blog/post"), true);
   assert.equal(propertyMatchesWebsite("https://www.example.com/blog/", "https://www.example.com/shop"), false);
   assert.equal(propertyMatchesWebsite("https://example.com/", "https://www.example.com/"), false);
+  assert.equal(propertyMatchesWebsite("http://www.example.com/", "https://www.example.com/"), false);
 });
 
 test("uses completed data ending three UTC days before today", () => {
