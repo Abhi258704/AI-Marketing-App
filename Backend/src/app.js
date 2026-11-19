@@ -20,6 +20,7 @@ import analyticsRoutes from "./routes/analytics.routes.js";
 import reviewRoutes from "./routes/review.routes.js";
 import uploadRoutes from "./routes/upload.routes.js";
 import seoRoutes from "./routes/seo.routes.js";
+import googleBusinessRoutes from "./routes/googleBusiness.routes.js";
 
 dotenv.config();
 
@@ -64,6 +65,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/uploads", uploadRoutes);
 app.use("/api/seo", seoRoutes);
+app.use("/api/google-business", googleBusinessRoutes);
 
 app.use(errorHandler);
 export default app;
