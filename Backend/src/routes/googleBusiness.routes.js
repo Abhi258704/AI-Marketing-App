@@ -12,6 +12,9 @@ import {
   saveGoogleBusinessLocationMapping,
   deleteGoogleBusinessLocationMapping,
 } from "../controllers/googleBusiness.controller.js";
+import {
+  generateGoogleBusinessReviewReplyDraft,
+} from "../controllers/googleReviewReply.controller.js";
 
 const router = express.Router();
 
@@ -25,6 +28,10 @@ router.get("/connection", getGoogleBusinessConnection);
 router.get("/accounts", listGoogleBusinessAccounts);
 router.get("/accounts/:accountId/locations", listGoogleBusinessLocations);
 router.get("/businesses/:businessId/reviews", listGoogleBusinessReviews);
+router.post(
+  "/businesses/:businessId/reviews/:reviewId/draft-reply",
+  generateGoogleBusinessReviewReplyDraft
+);
 router.get("/businesses/:businessId/location", getGoogleBusinessLocationMapping);
 router.put("/businesses/:businessId/location", saveGoogleBusinessLocationMapping);
 router.delete("/businesses/:businessId/location", deleteGoogleBusinessLocationMapping);
