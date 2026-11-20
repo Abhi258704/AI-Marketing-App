@@ -2,6 +2,11 @@ import { createHash, randomBytes } from "node:crypto";
 import GoogleBusinessConnection from "../models/googleBusinessConnection.model.js";
 import GoogleBusinessOAuthState from "../models/googleBusinessOAuthState.model.js";
 import {
+  fetchGoogleBusinessAccounts,
+  fetchGoogleBusinessLocations,
+  getGoogleBusinessAccessToken,
+} from "../services/google-business.service.js";
+import {
   createGoogleBusinessAuthorizationUrl,
   exchangeGoogleBusinessCode,
   getGoogleBusinessProfile,
@@ -168,6 +173,97 @@ export async function googleBusinessOAuthCallback(req, res) {
       console.error("Google Business callback redirect error:", redirectError.message);
       return res.status(500).send("Google Business Profile connection failed. Return to the app and try again.");
     }
+  }
+}
+
+
+async function getConnectedGoogleBusinessAccount(userId) {
+  return GoogleBusinessConnection.findOne({
+    userId,
+    status: "connected",
+  }).select("+refreshTokenEncrypted");
+}
+
+export async function listGoogleBusinessAccounts(req, res) {
+  try {
+    const connection = await getConnectedGoogleBusinessAccount(req.user._id);
+    if (!connection) {
+      return res.status(409).json({ message: "Connect Google Business Profile first." });
+    }
+
+    const accessToken = await getGoogleBusinessAccessToken(
+      connection,
+      decryptGoogleBusinessToken
+    );
+    const accounts = await fetchGoogleBusinessAccounts(accessToken);
+
+    return res.status(200).json({
+      accounts: accounts.map((account) => ({
+        name: account.name,
+        accountName: account.accountName || null,
+        type: account.type || null,
+        role: account.role || null,
+        permissionLevel: account.permissionLevel || null,
+      })),
+    });
+  } catch (error) {
+    console.error("List Google Business accounts error:", error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      await GoogleBusinessConnection.updateOne(
+        { userId: req.user._id },
+        { $set: { status: "reauthorization_required", lastError: "Google authorization needs to be renewed." } }
+      );
+    }
+    return res.status(error.response?.status === 403 ? 403 : 502).json({
+      message: error.response?.data?.error?.message || safeGoogleError(error),
+    });
+  }
+}
+
+export async function listGoogleBusinessLocations(req, res) {
+  try {
+    const connection = await getConnectedGoogleBusinessAccount(req.user._id);
+    if (!connection) {
+      return res.status(409).json({ message: "Connect Google Business Profile first." });
+    }
+
+    const accountId = String(req.params.accountId || "");
+    if (!/^[A-Za-z0-9_-]+$/.test(accountId)) {
+      return res.status(400).json({ message: "Invalid Google Business account ID." });
+    }
+
+    const accessToken = await getGoogleBusinessAccessToken(
+      connection,
+      decryptGoogleBusinessToken
+    );
+    const locations = await fetchGoogleBusinessLocations(
+      accessToken,
+      `accounts/${accountId}`
+    );
+
+    return res.status(200).json({
+      locations: locations.map((location) => ({
+        name: location.name,
+        title: location.title || null,
+        storeCode: location.storeCode || null,
+        websiteUri: location.websiteUri || null,
+        phoneNumbers: location.phoneNumbers || null,
+        storefrontAddress: location.storefrontAddress || null,
+        primaryCategory: location.primaryCategory || null,
+        metadata: location.metadata || null,
+      })),
+    });
+  } catch (error) {
+    console.error("List Google Business locations error:", error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      await GoogleBusinessConnection.updateOne(
+        { userId: req.user._id },
+        { $set: { status: "reauthorization_required", lastError: "Google authorization needs to be renewed." } }
+      );
+    }
+    return res.status(error.response?.status === 403 ? 403 : 502).json({
+      message: error.response?.data?.error?.message || safeGoogleError(error),
+    });
   }
 }
 
