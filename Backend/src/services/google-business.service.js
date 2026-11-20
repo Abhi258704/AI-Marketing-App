@@ -117,7 +117,7 @@ export async function publishGoogleBusinessReviewReply(
   accessToken,
   accountName,
   locationName,
-  reviewId,
+  reviewName,
   comment
 ) {
   if (!/^accounts\/[A-Za-z0-9_-]+$/.test(accountName)) {
@@ -126,18 +126,18 @@ export async function publishGoogleBusinessReviewReply(
   if (!/^locations\/[A-Za-z0-9_-]+$/.test(locationName)) {
     throw new Error("Invalid Google Business location.");
   }
+  const expectedReviewPrefix = `${accountName}/${locationName}/reviews/`;
   if (
-    typeof reviewId !== "string" ||
-    !/^[A-Za-z0-9_-]+$/.test(reviewId) ||
-    reviewId.startsWith("dev-mock-")
+    typeof reviewName !== "string" ||
+    !reviewName.startsWith(expectedReviewPrefix) ||
+    !/^[A-Za-z0-9_=-]+$/.test(reviewName.slice(expectedReviewPrefix.length))
   ) {
-    throw new Error("This is not a publishable Google review.");
+    throw new Error("This is not a valid review for the mapped Google Business location.");
   }
   if (typeof comment !== "string" || !comment.trim() || Buffer.byteLength(comment, "utf8") > 4096) {
     throw new Error("Google review replies must contain 1–4,096 UTF-8 bytes.");
   }
 
-  const reviewName = `${accountName}/${locationName}/reviews/${reviewId}`;
   const response = await axios.put(
     `https://mybusiness.googleapis.com/v4/${reviewName}/reply`,
     { comment: comment.trim() },
