@@ -398,6 +398,65 @@ export async function deleteGoogleBusinessLocationMapping(req, res) {
   }
 }
 
+export async function listGoogleBusinessReviews(req, res) {
+  try {
+    const business = await getOwnedBusiness(req.params.businessId, req.user._id);
+    if (!business) return res.status(404).json({ message: "Business not found." });
+
+    const mapping = await GoogleBusinessLocation.findOne({
+      businessId: business._id,
+      userId: req.user._id,
+    });
+    if (!mapping) {
+      return res.status(409).json({ message: "Link a Google Business location to this business first." });
+    }
+
+    const connection = await getConnectedGoogleBusinessAccount(req.user._id);
+    if (!connection) {
+      return res.status(409).json({ message: "Connect Google Business Profile first." });
+    }
+
+    const rawPageToken = typeof req.query.pageToken === "string" ? req.query.pageToken : "";
+    if (rawPageToken.length > 2048) {
+      return res.status(400).json({ message: "Invalid Google reviews page token." });
+    }
+
+    const accessToken = await getGoogleBusinessAccessToken(connection, decryptGoogleBusinessToken);
+    const result = await fetchGoogleBusinessReviews(
+      accessToken,
+      mapping.googleAccountName,
+      mapping.googleLocationName,
+      rawPageToken
+    );
+
+    return res.status(200).json({
+      reviews: result.reviews || [],
+      averageRating: result.averageRating ?? null,
+      totalReviewCount: result.totalReviewCount ?? 0,
+      nextPageToken: result.nextPageToken || null,
+      locationTitle: mapping.locationTitle,
+      source: "google",
+    });
+  } catch (error) {
+    console.error("List Google Business reviews error:", error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      await GoogleBusinessConnection.updateOne(
+        { userId: req.user._id },
+        { $set: { status: "reauthorization_required", lastError: "Google authorization needs to be renewed." } }
+      );
+    }
+
+    const googleStatus = error.response?.status;
+    const message = googleStatus === 404
+      ? "Google could not find reviews for this location. Confirm the listing is verified and try again."
+      : googleStatus === 403
+        ? "Google denied access to reviews. Check the account's access and Business Profile API permissions."
+        : error.response?.data?.error?.message || safeGoogleError(error);
+
+    return res.status(googleStatus === 403 ? 403 : googleStatus === 404 ? 409 : 502).json({ message });
+  }
+}
+
 export async function getGoogleBusinessConnection(req, res) {
   try {
     const connection = await GoogleBusinessConnection.findOne({
