@@ -33,7 +33,9 @@ export default function GoogleReviewsPage() {
   const [drafts, setDrafts] = useState({});
   const [draftErrors, setDraftErrors] = useState({});
   const [generatingReviewId, setGeneratingReviewId] = useState("");
-  const [copiedReviewId, setCopiedReviewId] = useState("");\n  const [savingReviewId, setSavingReviewId] = useState("");\n  const [savedReviewIds, setSavedReviewIds] = useState({});
+  const [copiedReviewId, setCopiedReviewId] = useState("");
+  const [savingReviewId, setSavingReviewId] = useState("");
+  const [savedReviewIds, setSavedReviewIds] = useState({});
 
   const loadReviews = useCallback(async ({ append = false } = {}) => {
     if (!businessId) return;
@@ -73,7 +75,8 @@ export default function GoogleReviewsPage() {
         rating: STAR_VALUES[review.starRating] || 0,
         comment: review.comment || "",
       });
-      setDrafts((current) => ({ ...current, [reviewId]: result.reply || "" }));\n      setSavedReviewIds((current) => ({ ...current, [reviewId]: true }));
+      setDrafts((current) => ({ ...current, [reviewId]: result.reply || "" }));
+      setSavedReviewIds((current) => ({ ...current, [reviewId]: true }));
     } catch (err) {
       setDraftErrors((current) => ({
         ...current,
@@ -84,7 +87,21 @@ export default function GoogleReviewsPage() {
     }
   };
 
-  const saveDraft = async (reviewId) => {\n    setSavingReviewId(reviewId);\n    setDraftErrors((current) => ({ ...current, [reviewId]: "" }));\n    try {\n      const result = await saveGoogleBusinessReviewReplyDraft(businessId, reviewId, drafts[reviewId]);\n      setDrafts((current) => ({ ...current, [reviewId]: result.reply }));\n      setSavedReviewIds((current) => ({ ...current, [reviewId]: true }));\n    } catch (err) {\n      setDraftErrors((current) => ({ ...current, [reviewId]: getErrorMessage(err, "Could not save this draft.") }));\n    } finally {\n      setSavingReviewId("");\n    }\n  };\n\n  const copyDraft = async (reviewId) => {
+  const saveDraft = async (reviewId) => {
+    setSavingReviewId(reviewId);
+    setDraftErrors((current) => ({ ...current, [reviewId]: "" }));
+    try {
+      const result = await saveGoogleBusinessReviewReplyDraft(businessId, reviewId, drafts[reviewId]);
+      setDrafts((current) => ({ ...current, [reviewId]: result.reply }));
+      setSavedReviewIds((current) => ({ ...current, [reviewId]: true }));
+    } catch (err) {
+      setDraftErrors((current) => ({ ...current, [reviewId]: getErrorMessage(err, "Could not save this draft.") }));
+    } finally {
+      setSavingReviewId("");
+    }
+  };
+
+  const copyDraft = async (reviewId) => {
     try {
       await navigator.clipboard.writeText(drafts[reviewId] || "");
       setCopiedReviewId(reviewId);
@@ -139,7 +156,10 @@ export default function GoogleReviewsPage() {
               {draft && <>
                 <textarea
                   value={draft}
-                  onChange={(event) => {\n                    setDrafts((current) => ({ ...current, [reviewId]: event.target.value }));\n                    setSavedReviewIds((current) => ({ ...current, [reviewId]: false }));\n                  }}
+                  onChange={(event) => {
+                    setDrafts((current) => ({ ...current, [reviewId]: event.target.value }));
+                    setSavedReviewIds((current) => ({ ...current, [reviewId]: false }));
+                  }}
                   rows={4}
                   maxLength={1500}
                   aria-label="Editable AI review reply draft"
