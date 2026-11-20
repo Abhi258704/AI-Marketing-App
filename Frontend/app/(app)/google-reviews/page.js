@@ -223,7 +223,7 @@ export default function GoogleReviewsPage() {
 
             <div className="border-t border-line pt-3">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <div><p className="text-sm font-medium">AI reply assistant</p><p className="text-xs text-muted">Generate a draft, edit it, then copy it for manual posting.</p></div>
+                <div><p className="text-sm font-medium">AI reply assistant</p><p className="text-xs text-muted">Generate a draft, edit and save it, then approve before publishing to Google.</p></div>
                 <Button size="sm" variant="secondary" onClick={() => generateReply(review)} loading={generatingReviewId === reviewId} disabled={Boolean(generatingReviewId)}>
                   <Sparkles className="h-4 w-4" /> {draft ? "Regenerate draft" : "Generate reply"}
                 </Button>
