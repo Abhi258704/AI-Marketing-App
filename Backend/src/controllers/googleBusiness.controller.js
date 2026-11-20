@@ -7,6 +7,7 @@ import GoogleBusinessOAuthState from "../models/googleBusinessOAuthState.model.j
 import {
   fetchGoogleBusinessAccounts,
   fetchGoogleBusinessLocations,
+  fetchGoogleBusinessReviews,
   getGoogleBusinessAccessToken,
 } from "../services/google-business.service.js";
 import {
