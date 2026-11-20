@@ -38,6 +38,8 @@ export default function GoogleReviewsPage() {
   const [copiedReviewId, setCopiedReviewId] = useState("");
   const [savingReviewId, setSavingReviewId] = useState("");
   const [savedReviewIds, setSavedReviewIds] = useState({});
+  const [showingMockReviews, setShowingMockReviews] = useState(false);
+  const isDevelopment = process.env.NODE_ENV !== "production";
 
   const loadReviews = useCallback(async ({ append = false } = {}) => {
     if (!businessId) return;
@@ -130,12 +132,31 @@ export default function GoogleReviewsPage() {
     }
   };
 
+  const loadMockReview = () => {
+    const mockReview = {
+      reviewId: "dev-mock-review-positive-001",
+      reviewer: { displayName: "Alex Morgan" },
+      starRating: "FIVE",
+      comment: "Really happy with the service. The team was professional, arrived on time, and completed the work neatly. Thank you!",
+      createTime: new Date().toISOString(),
+      isMock: true,
+    };
+    setReviews([mockReview]);
+    setNextPageToken(null);
+    setShowingMockReviews(true);
+    setError("");
+  };
+
   const average = typeof data?.averageRating === "number" ? data.averageRating.toFixed(1) : "—";
 
   return <>
     <PageHeader title="Google reviews" description={activeBusiness ? `Read reviews from the Google Business Profile linked to ${activeBusiness.name}.` : "Select a business to view its Google reviews."}
-      actions={<Button variant="secondary" size="sm" onClick={() => loadReviews()} disabled={!businessId || loading}><RefreshCw className="h-4 w-4" /> Refresh</Button>} />
+      actions={<>
+        {isDevelopment && <Button variant="secondary" size="sm" onClick={loadMockReview} disabled={!businessId}>Load test review</Button>}
+        <Button variant="secondary" size="sm" onClick={() => { setShowingMockReviews(false); loadReviews(); }} disabled={!businessId || loading}><RefreshCw className="h-4 w-4" /> Refresh</Button>
+      </>} />
     {!businessId ? <Card><CardBody><p className="text-sm text-muted">Select a business from the business switcher to continue.</p></CardBody></Card> : <>
+      {showingMockReviews && <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Development test data only. This sample review is not from Google and will never be published to Google.</div>}
       {error && <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
       {data && <div className="mb-5 grid gap-3 sm:grid-cols-2">
         <Card><CardBody className="space-y-1"><p className="text-sm text-muted">Average Google rating</p><p className="text-2xl font-semibold">{average} / 5</p></CardBody></Card>
@@ -155,7 +176,7 @@ export default function GoogleReviewsPage() {
                 {review.reviewer?.profilePhotoUrl ? <img src={review.reviewer.profilePhotoUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sunken text-sm font-semibold">{review.reviewer?.displayName?.slice(0, 1) || "G"}</div>}
                 <div><p className="font-medium">{review.reviewer?.displayName || "Google user"}</p><p className="text-xs text-muted">{review.createTime ? new Date(review.createTime).toLocaleDateString() : "Date unavailable"}</p></div>
               </div>
-              <ReviewStars value={review.starRating} />
+              <div className="flex items-center gap-2"><ReviewStars value={review.starRating} />{review.isMock && <Badge tone="warning">Test review</Badge>}</div>
             </div>
             {review.comment ? <p className="whitespace-pre-wrap text-sm leading-6">{review.comment}</p> : <p className="text-sm italic text-muted">Rating only — no written comment.</p>}
             {review.reviewReply?.comment && <div className="rounded-lg bg-sunken p-3">
@@ -185,8 +206,10 @@ export default function GoogleReviewsPage() {
                   className="w-full rounded-lg border border-line-strong bg-surface p-3 text-sm leading-6 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15"
                 />
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs text-muted">Draft only · Not published to Google · {draft.length}/1500</span>
-                  <Button size="sm" onClick={() => copyDraft(reviewId)}><Copy className="h-4 w-4" /> {copiedReviewId === reviewId ? <><Check className="h-4 w-4" /> Copied</> : "Copy draft"}</Button>
+                  <span className="text-xs text-muted">Draft only · Not published · {savedReviewIds[reviewId] ? "Saved" : "Unsaved"} · {draft.length}/1500</span>
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => saveDraft(reviewId)} loading={savingReviewId === reviewId} disabled={!draft.trim() || Boolean(savingReviewId)}>Save draft</Button>
+                    <Button size="sm" onClick={() => copyDraft(reviewId)}><Copy className="h-4 w-4" /> {copiedReviewId === reviewId ? <><Check className="h-4 w-4" /> Copied</> : "Copy draft"}</Button>
                 </div>
               </>}
             </div>
