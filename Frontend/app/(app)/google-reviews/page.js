@@ -210,6 +210,7 @@ export default function GoogleReviewsPage() {
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="secondary" onClick={() => saveDraft(reviewId)} loading={savingReviewId === reviewId} disabled={!draft.trim() || Boolean(savingReviewId)}>Save draft</Button>
                     <Button size="sm" onClick={() => copyDraft(reviewId)}><Copy className="h-4 w-4" /> {copiedReviewId === reviewId ? <><Check className="h-4 w-4" /> Copied</> : "Copy draft"}</Button>
+                  </div>
                 </div>
               </>}
             </div>
