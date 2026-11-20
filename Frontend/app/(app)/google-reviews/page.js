@@ -1,12 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { MessageSquareText, RefreshCw, Star, ExternalLink } from "lucide-react";
+import { MessageSquareText, RefreshCw, Star, ExternalLink, Sparkles, Copy, Check } from "lucide-react";
 import { useBusiness } from "@/components/providers/business-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/feedback";
 import { Card, CardBody, PageHeader } from "@/components/ui/card";
-import { listGoogleBusinessReviews } from "@/lib/api/google-business";
+import {
+  generateGoogleBusinessReviewReplyDraft,
+  listGoogleBusinessReviews,
+} from "@/lib/api/google-business";
 import { getErrorMessage } from "@/lib/api/client";
 
 const STAR_VALUES = { ONE: 1, TWO: 2, THREE: 3, FOUR: 4, FIVE: 5 };
@@ -27,6 +30,10 @@ export default function GoogleReviewsPage() {
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
+  const [drafts, setDrafts] = useState({});
+  const [draftErrors, setDraftErrors] = useState({});
+  const [generatingReviewId, setGeneratingReviewId] = useState("");
+  const [copiedReviewId, setCopiedReviewId] = useState("");
 
   const loadReviews = useCallback(async ({ append = false } = {}) => {
     if (!businessId) return;
@@ -50,8 +57,42 @@ export default function GoogleReviewsPage() {
     setData(null);
     setReviews([]);
     setNextPageToken(null);
+    setDrafts({});
+    setDraftErrors({});
     if (businessId) loadReviews();
   }, [businessId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const generateReply = async (review) => {
+    const reviewId = review.reviewId || review.name;
+    if (!businessId || !reviewId) return;
+    setGeneratingReviewId(reviewId);
+    setDraftErrors((current) => ({ ...current, [reviewId]: "" }));
+    try {
+      const result = await generateGoogleBusinessReviewReplyDraft(businessId, reviewId, {
+        reviewerName: review.reviewer?.displayName || "",
+        rating: STAR_VALUES[review.starRating] || 0,
+        comment: review.comment || "",
+      });
+      setDrafts((current) => ({ ...current, [reviewId]: result.reply || "" }));
+    } catch (err) {
+      setDraftErrors((current) => ({
+        ...current,
+        [reviewId]: getErrorMessage(err, "Couldn't generate a reply."),
+      }));
+    } finally {
+      setGeneratingReviewId("");
+    }
+  };
+
+  const copyDraft = async (reviewId) => {
+    try {
+      await navigator.clipboard.writeText(drafts[reviewId] || "");
+      setCopiedReviewId(reviewId);
+      window.setTimeout(() => setCopiedReviewId(""), 1800);
+    } catch {
+      setDraftErrors((current) => ({ ...current, [reviewId]: "Could not copy the draft. Select and copy it manually." }));
+    }
+  };
 
   const average = typeof data?.averageRating === "number" ? data.averageRating.toFixed(1) : "—";
 
@@ -69,21 +110,49 @@ export default function GoogleReviewsPage() {
           <MessageSquareText className="h-8 w-8 text-muted" /><p className="font-medium">No Google reviews found</p>
           <p className="max-w-lg text-sm text-muted">The listing may not have received reviews yet, or Google may require the Business Profile to be verified before reviews can be retrieved.</p>
         </CardBody></Card>
-        : <div className="space-y-3">{reviews.map((review) => <Card key={review.name}><CardBody className="space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              {review.reviewer?.profilePhotoUrl ? <img src={review.reviewer.profilePhotoUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sunken text-sm font-semibold">{review.reviewer?.displayName?.slice(0, 1) || "G"}</div>}
-              <div><p className="font-medium">{review.reviewer?.displayName || "Google user"}</p><p className="text-xs text-muted">{review.createTime ? new Date(review.createTime).toLocaleDateString() : "Date unavailable"}</p></div>
+        : <div className="space-y-3">{reviews.map((review) => {
+          const reviewId = review.reviewId || review.name;
+          const draft = drafts[reviewId] || "";
+          return <Card key={reviewId}><CardBody className="space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                {review.reviewer?.profilePhotoUrl ? <img src={review.reviewer.profilePhotoUrl} alt="" className="h-9 w-9 rounded-full object-cover" /> : <div className="flex h-9 w-9 items-center justify-center rounded-full bg-sunken text-sm font-semibold">{review.reviewer?.displayName?.slice(0, 1) || "G"}</div>}
+                <div><p className="font-medium">{review.reviewer?.displayName || "Google user"}</p><p className="text-xs text-muted">{review.createTime ? new Date(review.createTime).toLocaleDateString() : "Date unavailable"}</p></div>
+              </div>
+              <ReviewStars value={review.starRating} />
             </div>
-            <ReviewStars value={review.starRating} />
-          </div>
-          {review.comment ? <p className="whitespace-pre-wrap text-sm leading-6">{review.comment}</p> : <p className="text-sm italic text-muted">Rating only — no written comment.</p>}
-          {review.reviewReply?.comment && <div className="rounded-lg bg-sunken p-3">
-            <div className="mb-1 flex items-center gap-2"><Badge tone="success">Owner reply</Badge><span className="text-xs text-muted">{review.reviewReply.updateTime ? new Date(review.reviewReply.updateTime).toLocaleDateString() : ""}</span></div>
-            <p className="whitespace-pre-wrap text-sm">{review.reviewReply.comment}</p>
-          </div>}
-          {review.reviewReplyUrl && <a href={review.reviewReplyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-brand-700 hover:underline">Open review on Google <ExternalLink className="h-3 w-3" /></a>}
-        </CardBody></Card>)}</div>}
+            {review.comment ? <p className="whitespace-pre-wrap text-sm leading-6">{review.comment}</p> : <p className="text-sm italic text-muted">Rating only — no written comment.</p>}
+            {review.reviewReply?.comment && <div className="rounded-lg bg-sunken p-3">
+              <div className="mb-1 flex items-center gap-2"><Badge tone="success">Owner reply</Badge><span className="text-xs text-muted">{review.reviewReply.updateTime ? new Date(review.reviewReply.updateTime).toLocaleDateString() : ""}</span></div>
+              <p className="whitespace-pre-wrap text-sm">{review.reviewReply.comment}</p>
+            </div>}
+            {review.reviewReplyUrl && <a href={review.reviewReplyUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-brand-700 hover:underline">Open review on Google <ExternalLink className="h-3 w-3" /></a>}
+
+            <div className="border-t border-line pt-3">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <div><p className="text-sm font-medium">AI reply assistant</p><p className="text-xs text-muted">Generate a draft, edit it, then copy it for manual posting.</p></div>
+                <Button size="sm" variant="secondary" onClick={() => generateReply(review)} loading={generatingReviewId === reviewId} disabled={Boolean(generatingReviewId)}>
+                  <Sparkles className="h-4 w-4" /> {draft ? "Regenerate draft" : "Generate reply"}
+                </Button>
+              </div>
+              {draftErrors[reviewId] && <p role="alert" className="mb-2 text-sm text-red-600">{draftErrors[reviewId]}</p>}
+              {draft && <>
+                <textarea
+                  value={draft}
+                  onChange={(event) => setDrafts((current) => ({ ...current, [reviewId]: event.target.value }))}
+                  rows={4}
+                  maxLength={1500}
+                  aria-label="Editable AI review reply draft"
+                  className="w-full rounded-lg border border-line-strong bg-surface p-3 text-sm leading-6 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15"
+                />
+                <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs text-muted">Draft only · Not published to Google · {draft.length}/1500</span>
+                  <Button size="sm" onClick={() => copyDraft(reviewId)}><Copy className="h-4 w-4" /> {copiedReviewId === reviewId ? <><Check className="h-4 w-4" /> Copied</> : "Copy draft"}</Button>
+                </div>
+              </>}
+            </div>
+          </CardBody></Card>;
+        })}</div>}
       {nextPageToken && <div className="mt-5 flex justify-center"><Button variant="secondary" onClick={() => loadReviews({ append: true })} loading={loadingMore} disabled={loadingMore}>Load more reviews</Button></div>}
     </>}
   </>;
