@@ -14,6 +14,8 @@ import {
 } from "../controllers/googleBusiness.controller.js";
 import {
   generateGoogleBusinessReviewReplyDraft,
+  listGoogleBusinessReviewReplyDrafts,
+  saveGoogleBusinessReviewReplyDraft,
 } from "../controllers/googleReviewReply.controller.js";
 
 const router = express.Router();
@@ -28,9 +30,17 @@ router.get("/connection", getGoogleBusinessConnection);
 router.get("/accounts", listGoogleBusinessAccounts);
 router.get("/accounts/:accountId/locations", listGoogleBusinessLocations);
 router.get("/businesses/:businessId/reviews", listGoogleBusinessReviews);
+router.get(
+  "/businesses/:businessId/review-reply-drafts",
+  listGoogleBusinessReviewReplyDrafts
+);
 router.post(
   "/businesses/:businessId/reviews/:reviewId/draft-reply",
   generateGoogleBusinessReviewReplyDraft
+);
+router.put(
+  "/businesses/:businessId/reviews/:reviewId/draft-reply",
+  saveGoogleBusinessReviewReplyDraft
 );
 router.get("/businesses/:businessId/location", getGoogleBusinessLocationMapping);
 router.put("/businesses/:businessId/location", saveGoogleBusinessLocationMapping);
