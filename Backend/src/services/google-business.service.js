@@ -1,3 +1,4 @@
+import axios from "axios";
 import { OAuth2Client } from "google-auth-library";
 
 export const GOOGLE_BUSINESS_SCOPE =
@@ -42,4 +43,64 @@ export async function getGoogleBusinessProfile(accessToken) {
     url: "https://openidconnect.googleapis.com/v1/userinfo",
   });
   return response.data || {};
+}
+
+export async function getGoogleBusinessAccessToken(connection, decryptToken) {
+  if (!connection?.refreshTokenEncrypted) {
+    throw new Error("Google Business Profile is not connected.");
+  }
+
+  const client = createGoogleBusinessOAuthClient();
+  client.setCredentials({
+    refresh_token: decryptToken(connection.refreshTokenEncrypted),
+  });
+
+  const { token } = await client.getAccessToken();
+  if (!token) {
+    throw new Error("Google could not refresh the access token. Reconnect the Google account.");
+  }
+
+  return token;
+}
+
+async function getAllPages(url, accessToken, params = {}, collectionKey) {
+  const items = [];
+  let pageToken;
+
+  do {
+    const response = await axios.get(url, {
+      headers: { Authorization: "Bearer " + accessToken },
+      params: { ...params, ...(pageToken ? { pageToken } : {}) },
+      timeout: 20000,
+    });
+    items.push(...(response.data?.[collectionKey] || []));
+    pageToken = response.data?.nextPageToken;
+  } while (pageToken);
+
+  return items;
+}
+
+export async function fetchGoogleBusinessAccounts(accessToken) {
+  return getAllPages(
+    "https://mybusinessaccountmanagement.googleapis.com/v1/accounts",
+    accessToken,
+    { pageSize: 20 },
+    "accounts"
+  );
+}
+
+export async function fetchGoogleBusinessLocations(accessToken, accountName) {
+  if (!/^accounts\\/[A-Za-z0-9_-]+$/.test(accountName)) {
+    throw new Error("Invalid Google Business account.");
+  }
+
+  return getAllPages(
+    `https://mybusinessbusinessinformation.googleapis.com/v1/${accountName}/locations`,
+    accessToken,
+    {
+      pageSize: 100,
+      readMask: "name,title,storeCode,websiteUri,phoneNumbers,storefrontAddress,regularHours,primaryCategory,metadata",
+    },
+    "locations"
+  );
 }
