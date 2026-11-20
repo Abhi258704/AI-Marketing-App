@@ -295,7 +295,7 @@ export async function publishGoogleBusinessReviewReplyDraft(req, res) {
 
     // A received HTTP error confirms Google rejected the request. A timeout
     // or network failure is ambiguous, so keep the lock to prevent duplicates.
-    if (claimFilter && status) {
+    if (claimFilter && status >= 400 && status < 500) {
       await GoogleReviewReplyDraft.updateOne(
         claimFilter,
         { $set: { status: "draft" } }
