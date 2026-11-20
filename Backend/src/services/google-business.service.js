@@ -4,13 +4,13 @@ export const GOOGLE_BUSINESS_SCOPE =
   "https://www.googleapis.com/auth/business.manage";
 
 export function createGoogleBusinessOAuthClient() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = process.env.GBP_GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GBP_GOOGLE_CLIENT_SECRET;
   const redirectUri = process.env.GBP_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error(
-      "Google Business OAuth is not configured. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GBP_REDIRECT_URI to the backend environment."
+      "Google Business OAuth is not configured. Add GBP_GOOGLE_CLIENT_ID, GBP_GOOGLE_CLIENT_SECRET and GBP_REDIRECT_URI to the backend environment."
     );
   }
 
