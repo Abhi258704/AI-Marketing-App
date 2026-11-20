@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Building2, Link2, RefreshCw, Unlink } from "lucide-react";
+import { Building2, Link2, RefreshCw, Unlink, Check } from "lucide-react";
 import { useBusiness } from "@/components/providers/business-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
@@ -12,17 +12,24 @@ import {
   getGoogleBusinessConnection,
   listGoogleBusinessAccounts,
   listGoogleBusinessLocations,
+  getGoogleBusinessLocationMapping,
+  saveGoogleBusinessLocationMapping,
+  deleteGoogleBusinessLocationMapping,
 } from "@/lib/api/google-business";
 
 export function GoogleBusinessIntegration() {
   const { activeBusiness } = useBusiness();
+  const businessId = activeBusiness?._id || activeBusiness?.id;
   const [connection, setConnection] = useState(null);
   const [accounts, setAccounts] = useState([]);
   const [locations, setLocations] = useState([]);
-  const [accountId, setAccountId] = useState("");
+  const [accountName, setAccountName] = useState("");
+  const [selectedLocationName, setSelectedLocationName] = useState("");
+  const [mapping, setMapping] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const loadConnection = useCallback(async () => {
     setLoading(true);
@@ -36,6 +43,9 @@ export function GoogleBusinessIntegration() {
       } else {
         setAccounts([]);
         setLocations([]);
+        setMapping(null);
+        setAccountName("");
+        setSelectedLocationName("");
       }
     } catch (err) {
       setError(err.message || "Couldn't load Google Business Profile connection.");
@@ -45,6 +55,36 @@ export function GoogleBusinessIntegration() {
   }, []);
 
   useEffect(() => { loadConnection(); }, [loadConnection]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadMapping() {
+      setMapping(null);
+      setLocations([]);
+      setAccountName("");
+      setSelectedLocationName("");
+      setNotice("");
+      if (!businessId || connection?.status !== "connected") return;
+      try {
+        const result = await getGoogleBusinessLocationMapping(businessId);
+        if (cancelled) return;
+        const saved = result.mapping || null;
+        setMapping(saved);
+        if (saved?.googleAccountName) {
+          setAccountName(saved.googleAccountName);
+          const accountId = saved.googleAccountName.split("/").pop();
+          const locationResult = await listGoogleBusinessLocations(accountId);
+          if (cancelled) return;
+          setLocations(locationResult.locations || []);
+          setSelectedLocationName(saved.googleLocationName || "");
+        }
+      } catch (err) {
+        if (!cancelled) setError(err.message || "Couldn't load the saved Google location.");
+      }
+    }
+    loadMapping();
+    return () => { cancelled = true; };
+  }, [businessId, connection?.status]);
 
   const handleConnect = async () => {
     setBusy("connect");
@@ -60,13 +100,14 @@ export function GoogleBusinessIntegration() {
   };
 
   const handleAccountChange = async (value) => {
-    setAccountId(value);
+    setAccountName(value);
+    setSelectedLocationName("");
     setLocations([]);
     if (!value) return;
     setBusy("locations");
     setError("");
     try {
-      const result = await listGoogleBusinessLocations(value);
+      const result = await listGoogleBusinessLocations(value.split("/").pop());
       setLocations(result.locations || []);
     } catch (err) {
       setError(err.message || "Couldn't load locations for this account.");
@@ -75,8 +116,44 @@ export function GoogleBusinessIntegration() {
     }
   };
 
+  const handleSaveMapping = async () => {
+    if (!businessId || !accountName || !selectedLocationName) return;
+    setBusy("save");
+    setError("");
+    setNotice("");
+    try {
+      const result = await saveGoogleBusinessLocationMapping(businessId, {
+        accountName,
+        locationName: selectedLocationName,
+      });
+      setMapping(result.mapping || null);
+      setNotice(result.message || "Google location linked successfully.");
+    } catch (err) {
+      setError(err.message || "Couldn't link this Google location.");
+    } finally {
+      setBusy("");
+    }
+  };
+
+  const handleUnlink = async () => {
+    if (!businessId || !window.confirm("Unlink this Google location from the selected business?")) return;
+    setBusy("unlink");
+    setError("");
+    setNotice("");
+    try {
+      await deleteGoogleBusinessLocationMapping(businessId);
+      setMapping(null);
+      setSelectedLocationName("");
+      setNotice("Google location unlinked.");
+    } catch (err) {
+      setError(err.message || "Couldn't unlink this Google location.");
+    } finally {
+      setBusy("");
+    }
+  };
+
   const handleDisconnect = async () => {
-    if (!window.confirm("Disconnect Google Business Profile?")) return;
+    if (!window.confirm("Disconnect Google Business Profile? Your saved business-to-location link will remain, but Google features will stop working until you reconnect.")) return;
     setBusy("disconnect");
     setError("");
     try {
@@ -84,13 +161,16 @@ export function GoogleBusinessIntegration() {
       setConnection(null);
       setAccounts([]);
       setLocations([]);
-      setAccountId("");
+      setAccountName("");
+      setSelectedLocationName("");
     } catch (err) {
       setError(err.message || "Couldn't disconnect Google Business Profile.");
     } finally {
       setBusy("");
     }
   };
+
+  const selectedLocation = locations.find((location) => location.name === selectedLocationName);
 
   return (
     <Card>
@@ -101,6 +181,7 @@ export function GoogleBusinessIntegration() {
       />
       <CardBody className="space-y-4">
         {error && <Alert tone="danger" title="Google Business Profile">{error}</Alert>}
+        {notice && <Alert tone="success" title="Google Business Profile">{notice}</Alert>}
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-muted"><Spinner /> Checking connection…</div>
         ) : connection?.status === "connected" ? (
@@ -114,27 +195,38 @@ export function GoogleBusinessIntegration() {
                 <RefreshCw className="h-4 w-4" /> Refresh
               </Button>
             </div>
-            <div className="space-y-2">
-              <label htmlFor="gbp-account" className="block text-sm font-medium">Google Business account</label>
-              <select id="gbp-account" value={accountId} onChange={(e) => handleAccountChange(e.target.value)} className="h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm" disabled={!accounts.length || Boolean(busy)}>
-                <option value="">Choose an account</option>
-                {accounts.map((account) => <option key={account.name} value={account.name?.split("/").pop()}>{account.accountName || account.name} {account.type ? `· ${account.type}` : ""}</option>)}
-              </select>
-              {busy === "locations" && <div className="flex items-center gap-2 text-sm text-muted"><Spinner /> Loading locations…</div>}
-              {locations.length > 0 && (
-                <div className="space-y-2 rounded-lg border border-line p-3">
-                  <p className="text-sm font-medium">Available locations</p>
-                  {locations.map((location) => (
-                    <div key={location.name} className="flex items-start gap-2 border-t border-line pt-2 text-sm">
-                      <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-                      <div><p className="font-medium">{location.title || "Untitled location"}</p><p className="text-xs text-muted">{location.storefrontAddress?.addressLines?.join(", ") || "Address not provided"}</p></div>
-                    </div>
-                  ))}
-                  <p className="text-xs text-muted">Location linking to this app business is the next backend step.</p>
+            {!activeBusiness ? (
+              <p className="text-sm text-muted">Select a business to manage its Google location.</p>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label htmlFor="gbp-account" className="block text-sm font-medium">Google Business account</label>
+                  <select id="gbp-account" value={accountName} onChange={(e) => handleAccountChange(e.target.value)} className="h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm" disabled={!accounts.length || Boolean(busy)}>
+                    <option value="">Choose an account</option>
+                    {accounts.map((account) => <option key={account.name} value={account.name}>{account.accountName || account.name} {account.type ? `· ${account.type}` : ""}</option>)}
+                  </select>
                 </div>
-              )}
-              {accountId && !busy && locations.length === 0 && <p className="text-xs text-muted">No locations found for this Google account.</p>}
-            </div>
+                {busy === "locations" && <div className="flex items-center gap-2 text-sm text-muted"><Spinner /> Loading locations…</div>}
+                {accountName && locations.length > 0 && (
+                  <div className="space-y-2">
+                    <label htmlFor="gbp-location" className="block text-sm font-medium">Google location for {activeBusiness.name}</label>
+                    <select id="gbp-location" value={selectedLocationName} onChange={(e) => setSelectedLocationName(e.target.value)} className="h-10 w-full rounded-lg border border-line-strong bg-surface px-3 text-sm" disabled={Boolean(busy)}>
+                      <option value="">Choose a location</option>
+                      {locations.map((location) => <option key={location.name} value={location.name}>{location.title || "Untitled location"}</option>)}
+                    </select>
+                    {selectedLocation && <p className="text-xs text-muted">{selectedLocation.storefrontAddress?.addressLines?.join(", ") || "Address not provided"}</p>}
+                  </div>
+                )}
+                {accountName && !busy && locations.length === 0 && <p className="text-xs text-muted">No locations found for this Google account.</p>}
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={handleSaveMapping} loading={busy === "save"} disabled={!selectedLocationName || !accountName || Boolean(busy)}>
+                    <Check className="h-4 w-4" /> {mapping ? "Update linked location" : "Link location"}
+                  </Button>
+                  {mapping && <Button variant="secondary" onClick={handleUnlink} loading={busy === "unlink"} disabled={Boolean(busy)}><Unlink className="h-4 w-4" /> Unlink location</Button>}
+                </div>
+                {mapping && <p className="text-xs text-muted">Linked to this business: {mapping.locationTitle}</p>}
+              </div>
+            )}
             <div className="border-t border-line pt-3">
               <Button variant="danger-outline" size="sm" onClick={handleDisconnect} loading={busy === "disconnect"} disabled={Boolean(busy)}><Unlink className="h-4 w-4" /> Disconnect Google</Button>
             </div>
