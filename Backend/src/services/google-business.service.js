@@ -99,7 +99,7 @@ export async function fetchGoogleBusinessLocations(accessToken, accountName) {
     accessToken,
     {
       pageSize: 100,
-      readMask: "name,title,storeCode,websiteUri,phoneNumbers,storefrontAddress,regularHours,primaryCategory,metadata",
+      readMask: "name,title,storeCode,websiteUri,phoneNumbers,storefrontAddress,regularHours,categories,metadata",
     },
     "locations"
   );
