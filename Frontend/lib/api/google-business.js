@@ -14,3 +14,18 @@ export const listGoogleBusinessLocations = (accountId) =>
 
 export const disconnectGoogleBusiness = () =>
   apiFetch("/api/google-business/connection", { method: "DELETE" });
+
+
+export const getGoogleBusinessLocationMapping = (businessId) =>
+  apiFetch(`/api/google-business/businesses/${encodeURIComponent(businessId)}/location`);
+
+export const saveGoogleBusinessLocationMapping = (businessId, mapping) =>
+  apiFetch(`/api/google-business/businesses/${encodeURIComponent(businessId)}/location`, {
+    method: "PUT",
+    body: JSON.stringify(mapping),
+  });
+
+export const deleteGoogleBusinessLocationMapping = (businessId) =>
+  apiFetch(`/api/google-business/businesses/${encodeURIComponent(businessId)}/location`, {
+    method: "DELETE",
+  });
