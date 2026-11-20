@@ -73,7 +73,7 @@ export default function GoogleReviewsPage() {
         rating: STAR_VALUES[review.starRating] || 0,
         comment: review.comment || "",
       });
-      setDrafts((current) => ({ ...current, [reviewId]: result.reply || "" }));
+      setDrafts((current) => ({ ...current, [reviewId]: result.reply || "" }));\n      setSavedReviewIds((current) => ({ ...current, [reviewId]: true }));
     } catch (err) {
       setDraftErrors((current) => ({
         ...current,
@@ -139,7 +139,7 @@ export default function GoogleReviewsPage() {
               {draft && <>
                 <textarea
                   value={draft}
-                  onChange={(event) => setDrafts((current) => ({ ...current, [reviewId]: event.target.value }))}
+                  onChange={(event) => {\n                    setDrafts((current) => ({ ...current, [reviewId]: event.target.value }));\n                    setSavedReviewIds((current) => ({ ...current, [reviewId]: false }));\n                  }}
                   rows={4}
                   maxLength={1500}
                   aria-label="Editable AI review reply draft"
