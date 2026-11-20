@@ -102,6 +102,19 @@ export async function generateGoogleBusinessReviewReplyDraft(req, res) {
     const input = validateReviewInput(req.params.reviewId, req.body);
     if (input.error) return res.status(400).json({ message: input.error });
 
+    const existingDraft = await GoogleReviewReplyDraft.findOne({
+      userId: req.user._id,
+      businessId: context.business._id,
+      reviewId: req.params.reviewId,
+    }).select("status");
+
+    if (existingDraft?.status === "published") {
+      return res.status(409).json({ message: "This reply has already been published and cannot be regenerated." });
+    }
+    if (existingDraft?.status === "publishing") {
+      return res.status(409).json({ message: "This reply is currently being published. Refresh before trying again." });
+    }
+
     const reply = await generateGoogleReviewReply({
       businessName: context.business.name,
       businessCategory: context.business.category,
@@ -164,8 +177,9 @@ export async function saveGoogleBusinessReviewReplyDraft(req, res) {
         businessId: context.business._id,
         googleLocationName: context.mapping.googleLocationName,
         reviewId: req.params.reviewId,
+        status: { $in: ["draft", "approved"] },
       },
-      { $set: { reply, status: "draft", generatedByAI: false } },
+      { $set: { reply, generatedByAI: false } },
       { new: true, runValidators: true }
     );
 
@@ -203,20 +217,14 @@ export async function publishGoogleBusinessReviewReplyDraft(req, res) {
       return res.status(400).json({ message: "Only real Google reviews can be published." });
     }
 
-    claimFilter = {
+    const draftFilter = {
       userId: req.user._id,
       businessId: context.business._id,
       googleLocationName: context.mapping.googleLocationName,
       reviewId,
-      status: "draft",
     };
 
-    const existingDraft = await GoogleReviewReplyDraft.findOne({
-      userId: req.user._id,
-      businessId: context.business._id,
-      googleLocationName: context.mapping.googleLocationName,
-      reviewId,
-    });
+    const existingDraft = await GoogleReviewReplyDraft.findOne(draftFilter);
 
     if (!existingDraft) {
       return res.status(404).json({ message: "Save a reply draft before publishing." });
@@ -245,13 +253,16 @@ export async function publishGoogleBusinessReviewReplyDraft(req, res) {
     );
 
     const claimedDraft = await GoogleReviewReplyDraft.findOneAndUpdate(
-      claimFilter,
+      { ...draftFilter, status: "draft" },
       { $set: { status: "publishing" } },
       { new: true }
     );
     if (!claimedDraft) {
       return res.status(409).json({ message: "This draft is no longer available to publish. Refresh and try again." });
     }
+
+    // Only this request may release the lock it successfully acquired.
+    claimFilter = { _id: claimedDraft._id, status: "publishing" };
 
     const googleReply = await publishGoogleBusinessReviewReply(
       accessToken,
@@ -274,15 +285,18 @@ export async function publishGoogleBusinessReviewReplyDraft(req, res) {
       message: "Reply published to Google successfully.",
     });
   } catch (error) {
-    if (claimFilter) {
+    const status = error.response?.status;
+
+    // A received HTTP error confirms Google rejected the request. A timeout
+    // or network failure is ambiguous, so keep the lock to prevent duplicates.
+    if (claimFilter && status) {
       await GoogleReviewReplyDraft.updateOne(
-        { ...claimFilter, status: "publishing" },
+        claimFilter,
         { $set: { status: "draft" } }
       ).catch((resetError) => {
-        console.error("Could not reset failed Google review publishing lock:", resetError.message);
+        console.error("Could not reset rejected Google review publishing lock:", resetError.message);
       });
     }
-    const status = error.response?.status;
     console.error("Publish Google review reply error:", error.response?.data || error.message);
     return res.status(status === 401 ? 401 : status === 403 ? 403 : status === 404 ? 404 : 502).json({
       message:
