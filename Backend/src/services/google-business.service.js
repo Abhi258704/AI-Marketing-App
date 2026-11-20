@@ -113,6 +113,43 @@ export async function fetchGoogleBusinessReviews(accessToken, accountName, locat
   return response.data || {};
 }
 
+export async function publishGoogleBusinessReviewReply(
+  accessToken,
+  accountName,
+  locationName,
+  reviewId,
+  comment
+) {
+  if (!/^accounts\/[A-Za-z0-9_-]+$/.test(accountName)) {
+    throw new Error("Invalid Google Business account.");
+  }
+  if (!/^locations\/[A-Za-z0-9_-]+$/.test(locationName)) {
+    throw new Error("Invalid Google Business location.");
+  }
+  if (
+    typeof reviewId !== "string" ||
+    !/^[A-Za-z0-9_-]+$/.test(reviewId) ||
+    reviewId.startsWith("dev-mock-")
+  ) {
+    throw new Error("This is not a publishable Google review.");
+  }
+  if (typeof comment !== "string" || !comment.trim() || Buffer.byteLength(comment, "utf8") > 4096) {
+    throw new Error("Google review replies must contain 1–4,096 UTF-8 bytes.");
+  }
+
+  const reviewName = `${accountName}/${locationName}/reviews/${reviewId}`;
+  const response = await axios.put(
+    `https://mybusiness.googleapis.com/v4/${reviewName}/reply`,
+    { comment: comment.trim() },
+    {
+      headers: { Authorization: "Bearer " + accessToken },
+      timeout: 20000,
+    }
+  );
+
+  return response.data || {};
+}
+
 export async function fetchGoogleBusinessLocations(accessToken, accountName) {
   if (!/^accounts\/[A-Za-z0-9_-]+$/.test(accountName)) {
     throw new Error("Invalid Google Business account.");
