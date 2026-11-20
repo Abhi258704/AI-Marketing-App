@@ -1,5 +1,8 @@
 import { createHash, randomBytes } from "node:crypto";
 import GoogleBusinessConnection from "../models/googleBusinessConnection.model.js";
+import GoogleBusinessLocation from "../models/googleBusinessLocation.model.js";
+import Business from "../models/business.model.js";
+import mongoose from "mongoose";
 import GoogleBusinessOAuthState from "../models/googleBusinessOAuthState.model.js";
 import {
   fetchGoogleBusinessAccounts,
@@ -264,6 +267,135 @@ export async function listGoogleBusinessLocations(req, res) {
     return res.status(error.response?.status === 403 ? 403 : 502).json({
       message: error.response?.data?.error?.message || safeGoogleError(error),
     });
+  }
+}
+
+
+async function getOwnedBusiness(businessId, userId) {
+  if (!mongoose.isValidObjectId(businessId)) return null;
+  return Business.findOne({ _id: businessId, ownerId: userId, isActive: true });
+}
+
+export async function getGoogleBusinessLocationMapping(req, res) {
+  try {
+    const business = await getOwnedBusiness(req.params.businessId, req.user._id);
+    if (!business) return res.status(404).json({ message: "Business not found." });
+
+    const mapping = await GoogleBusinessLocation.findOne({
+      businessId: business._id,
+      userId: req.user._id,
+    });
+
+    return res.status(200).json({ mapping });
+  } catch (error) {
+    console.error("Get Google Business location mapping error:", error.message);
+    return res.status(500).json({ message: "Could not load the Google Business location mapping." });
+  }
+}
+
+export async function saveGoogleBusinessLocationMapping(req, res) {
+  try {
+    const { accountName, locationName } = req.body || {};
+    const business = await getOwnedBusiness(req.params.businessId, req.user._id);
+    if (!business) return res.status(404).json({ message: "Business not found." });
+
+    if (
+      typeof accountName !== "string" ||
+      !/^accounts\/[A-Za-z0-9_-]+$/.test(accountName) ||
+      typeof locationName !== "string" ||
+      !new RegExp("^" + accountName.replace(/[.*+?^${}()|[\]\\]/g, "\\
+export async function getGoogleBusinessConnection(req, res) {") + "/locations/[A-Za-z0-9_-]+$").test(locationName)
+    ) {
+      return res.status(400).json({ message: "A valid Google account and location are required." });
+    }
+
+    const connection = await getConnectedGoogleBusinessAccount(req.user._id);
+    if (!connection) {
+      return res.status(409).json({ message: "Connect Google Business Profile first." });
+    }
+
+    const accessToken = await getGoogleBusinessAccessToken(connection, decryptGoogleBusinessToken);
+    const accounts = await fetchGoogleBusinessAccounts(accessToken);
+    if (!accounts.some((account) => account.name === accountName)) {
+      return res.status(403).json({ message: "This Google Business account is not accessible." });
+    }
+
+    const locations = await fetchGoogleBusinessLocations(accessToken, accountName);
+    const selectedLocation = locations.find((location) => location.name === locationName);
+    if (!selectedLocation) {
+      return res.status(403).json({ message: "This Google Business location is not accessible through the connected account." });
+    }
+
+    if (!selectedLocation.title) {
+      return res.status(422).json({ message: "Google did not return a name for this location." });
+    }
+
+    const existingMapping = await GoogleBusinessLocation.findOne({ businessId: business._id });
+    const conflictingMapping = await GoogleBusinessLocation.findOne({
+      googleLocationName: locationName,
+      businessId: { $ne: business._id },
+    });
+    if (conflictingMapping) {
+      return res.status(409).json({ message: "This Google Business location is already linked to another business in your workspace." });
+    }
+
+    const mapping = await GoogleBusinessLocation.findOneAndUpdate(
+      { businessId: business._id, userId: req.user._id },
+      {
+        $set: {
+          googleAccountName: accountName,
+          googleLocationName: locationName,
+          locationTitle: selectedLocation.title,
+          storeCode: selectedLocation.storeCode || null,
+          websiteUri: selectedLocation.websiteUri || null,
+          phoneNumbers: selectedLocation.phoneNumbers || null,
+          storefrontAddress: selectedLocation.storefrontAddress || null,
+          categories: selectedLocation.categories || null,
+          mappedAt: new Date(),
+        },
+      },
+      { new: true, upsert: true, runValidators: true }
+    );
+
+    return res.status(200).json({
+      message: existingMapping ? "Google Business location updated." : "Google Business location linked successfully.",
+      mapping,
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ message: "This Google Business location or app business is already linked." });
+    }
+    console.error("Save Google Business location mapping error:", error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      await GoogleBusinessConnection.updateOne(
+        { userId: req.user._id },
+        { $set: { status: "reauthorization_required", lastError: "Google authorization needs to be renewed." } }
+      );
+    }
+    return res.status(error.response?.status === 403 ? 403 : 502).json({
+      message: error.response?.data?.error?.message || safeGoogleError(error),
+    });
+  }
+}
+
+export async function deleteGoogleBusinessLocationMapping(req, res) {
+  try {
+    const business = await getOwnedBusiness(req.params.businessId, req.user._id);
+    if (!business) return res.status(404).json({ message: "Business not found." });
+
+    const result = await GoogleBusinessLocation.deleteOne({
+      businessId: business._id,
+      userId: req.user._id,
+    });
+
+    if (!result.deletedCount) {
+      return res.status(404).json({ message: "No Google Business location is linked to this business." });
+    }
+
+    return res.status(200).json({ message: "Google Business location unlinked successfully." });
+  } catch (error) {
+    console.error("Delete Google Business location mapping error:", error.message);
+    return res.status(500).json({ message: "Could not unlink the Google Business location." });
   }
 }
 
