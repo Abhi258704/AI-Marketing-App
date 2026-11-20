@@ -15,7 +15,6 @@ export const listGoogleBusinessLocations = (accountId) =>
 export const disconnectGoogleBusiness = () =>
   apiFetch("/api/google-business/connection", { method: "DELETE" });
 
-
 export const getGoogleBusinessLocationMapping = (businessId) =>
   apiFetch(`/api/google-business/businesses/${encodeURIComponent(businessId)}/location`);
 
@@ -34,3 +33,12 @@ export const listGoogleBusinessReviews = (businessId, pageToken) =>
   apiFetch(`/api/google-business/businesses/${encodeURIComponent(businessId)}/reviews`, {
     query: pageToken ? { pageToken } : undefined,
   });
+
+export const generateGoogleBusinessReviewReplyDraft = (businessId, reviewId, review) =>
+  apiFetch(
+    `/api/google-business/businesses/${encodeURIComponent(businessId)}/reviews/${encodeURIComponent(reviewId)}/draft-reply`,
+    {
+      method: "POST",
+      body: review,
+    }
+  );
