@@ -187,6 +187,7 @@ export async function saveGoogleBusinessReviewReplyDraft(req, res) {
 }
 
 export async function publishGoogleBusinessReviewReplyDraft(req, res) {
+  let claimFilter = null;
   try {
     const context = await getReviewReplyContext(req.params.businessId, req.user._id);
     if (context.error) {
@@ -202,22 +203,31 @@ export async function publishGoogleBusinessReviewReplyDraft(req, res) {
       return res.status(400).json({ message: "Only real Google reviews can be published." });
     }
 
-    const draft = await GoogleReviewReplyDraft.findOne({
+    claimFilter = {
+      userId: req.user._id,
+      businessId: context.business._id,
+      googleLocationName: context.mapping.googleLocationName,
+      reviewId,
+      status: "draft",
+    };
+
+    const existingDraft = await GoogleReviewReplyDraft.findOne({
       userId: req.user._id,
       businessId: context.business._id,
       googleLocationName: context.mapping.googleLocationName,
       reviewId,
     });
 
-    if (!draft) {
+    if (!existingDraft) {
       return res.status(404).json({ message: "Save a reply draft before publishing." });
     }
-    if (draft.status === "published") {
-      return res.status(409).json({
-        message: "This reply is already marked as published. Refresh Google reviews before attempting another reply.",
-      });
+    if (existingDraft.status === "published") {
+      return res.status(409).json({ message: "This reply is already published." });
     }
-    if (!draft.reply?.trim() || Buffer.byteLength(draft.reply, "utf8") > 4096) {
+    if (existingDraft.status === "publishing") {
+      return res.status(409).json({ message: "This reply is already being published. Refresh before retrying." });
+    }
+    if (!existingDraft.reply?.trim() || Buffer.byteLength(existingDraft.reply, "utf8") > 4096) {
       return res.status(400).json({ message: "The saved reply is empty or exceeds Google's 4,096-byte limit." });
     }
 
@@ -234,27 +244,44 @@ export async function publishGoogleBusinessReviewReplyDraft(req, res) {
       decryptGoogleBusinessToken
     );
 
+    const claimedDraft = await GoogleReviewReplyDraft.findOneAndUpdate(
+      claimFilter,
+      { $set: { status: "publishing" } },
+      { new: true }
+    );
+    if (!claimedDraft) {
+      return res.status(409).json({ message: "This draft is no longer available to publish. Refresh and try again." });
+    }
+
     const googleReply = await publishGoogleBusinessReviewReply(
       accessToken,
       context.mapping.googleAccountName,
       context.mapping.googleLocationName,
       reviewId,
-      draft.reply
+      claimedDraft.reply
     );
 
-    draft.status = "published";
-    draft.publishedAt = googleReply.updateTime ? new Date(googleReply.updateTime) : new Date();
-    draft.googleReplyUpdateTime = googleReply.updateTime || null;
-    await draft.save();
+    claimedDraft.status = "published";
+    claimedDraft.publishedAt = googleReply.updateTime ? new Date(googleReply.updateTime) : new Date();
+    claimedDraft.googleReplyUpdateTime = googleReply.updateTime || null;
+    await claimedDraft.save();
 
     return res.status(200).json({
       reviewId,
       status: "published",
-      publishedAt: draft.publishedAt,
+      publishedAt: claimedDraft.publishedAt,
       reviewReply: googleReply,
       message: "Reply published to Google successfully.",
     });
   } catch (error) {
+    if (claimFilter) {
+      await GoogleReviewReplyDraft.updateOne(
+        { ...claimFilter, status: "publishing" },
+        { $set: { status: "draft" } }
+      ).catch((resetError) => {
+        console.error("Could not reset failed Google review publishing lock:", resetError.message);
+      });
+    }
     const status = error.response?.status;
     console.error("Publish Google review reply error:", error.response?.data || error.message);
     return res.status(status === 401 ? 401 : status === 403 ? 403 : status === 404 ? 404 : 502).json({
