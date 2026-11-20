@@ -42,3 +42,15 @@ export const generateGoogleBusinessReviewReplyDraft = (businessId, reviewId, rev
       body: review,
     }
   );
+
+export const listGoogleBusinessReviewReplyDrafts = (businessId) =>
+  apiFetch(`/api/google-business/businesses/${encodeURIComponent(businessId)}/review-reply-drafts`);
+
+export const saveGoogleBusinessReviewReplyDraft = (businessId, reviewId, reply) =>
+  apiFetch(
+    `/api/google-business/businesses/${encodeURIComponent(businessId)}/reviews/${encodeURIComponent(reviewId)}/draft-reply`,
+    {
+      method: "PUT",
+      body: { reply },
+    }
+  );
