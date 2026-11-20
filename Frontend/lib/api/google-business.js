@@ -54,3 +54,9 @@ export const saveGoogleBusinessReviewReplyDraft = (businessId, reviewId, reply) 
       body: { reply },
     }
   );
+
+export const publishGoogleBusinessReviewReply = (businessId, reviewId) =>
+  apiFetch(
+    `/api/google-business/businesses/${encodeURIComponent(businessId)}/reviews/${encodeURIComponent(reviewId)}/publish-reply`,
+    { method: "POST" }
+  );
