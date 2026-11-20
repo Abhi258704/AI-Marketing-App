@@ -36,6 +36,8 @@ const googleReviewReplyDraftSchema = new mongoose.Schema(
       index: true,
     },
     generatedByAI: { type: Boolean, default: true },
+    publishedAt: { type: Date, default: null },
+    googleReplyUpdateTime: { type: String, default: null },
   },
   { timestamps: true }
 );
