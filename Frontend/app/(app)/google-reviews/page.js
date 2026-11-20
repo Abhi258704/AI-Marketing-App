@@ -93,7 +93,7 @@ export default function GoogleReviewsPage() {
   }, [businessId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generateReply = async (review) => {
-    const reviewId = review.reviewId || review.name;
+    const reviewId = review.name || review.reviewId;
     if (!businessId || !reviewId) return;
     setGeneratingReviewId(reviewId);
     setDraftErrors((current) => ({ ...current, [reviewId]: "" }));
@@ -130,7 +130,7 @@ export default function GoogleReviewsPage() {
   };
 
   const publishReply = async (review) => {
-    const reviewId = review.reviewId || review.name;
+    const reviewId = review.name || review.reviewId;
     if (!businessId || !reviewId || review.isMock || !savedReviewIds[reviewId] || publishedReviewIds[reviewId]) return;
 
     const warning = review.reviewReply?.comment
@@ -144,7 +144,7 @@ export default function GoogleReviewsPage() {
       await publishGoogleBusinessReviewReply(businessId, reviewId);
       setPublishedReviewIds((current) => ({ ...current, [reviewId]: true }));
       setReviews((current) => current.map((item) =>
-        (item.reviewId || item.name) === reviewId
+        (item.name || item.reviewId) === reviewId
           ? { ...item, reviewReply: { comment: drafts[reviewId], updateTime: new Date().toISOString() } }
           : item
       ));
@@ -204,7 +204,7 @@ export default function GoogleReviewsPage() {
           <p className="max-w-lg text-sm text-muted">The listing may not have received reviews yet, or Google may require the Business Profile to be verified before reviews can be retrieved.</p>
         </CardBody></Card>
         : <div className="space-y-3">{reviews.map((review) => {
-          const reviewId = review.reviewId || review.name;
+          const reviewId = review.name || review.reviewId;
           const draft = drafts[reviewId] || "";
           return <Card key={reviewId}><CardBody className="space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-3">
