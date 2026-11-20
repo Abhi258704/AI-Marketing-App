@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/feedback";
 import { Card, CardBody, PageHeader } from "@/components/ui/card";
 import {
   generateGoogleBusinessReviewReplyDraft,
+  listGoogleBusinessReviewReplyDrafts,
+  saveGoogleBusinessReviewReplyDraft,
   listGoogleBusinessReviews,
 } from "@/lib/api/google-business";
 import { getErrorMessage } from "@/lib/api/client";
@@ -61,7 +63,24 @@ export default function GoogleReviewsPage() {
     setNextPageToken(null);
     setDrafts({});
     setDraftErrors({});
-    if (businessId) loadReviews();
+    setSavedReviewIds({});
+    if (businessId) {
+      loadReviews();
+      listGoogleBusinessReviewReplyDrafts(businessId)
+        .then((result) => {
+          const savedDrafts = {};
+          (result.drafts || []).forEach((draft) => {
+            savedDrafts[draft.reviewId] = draft.reply;
+          });
+          setDrafts(savedDrafts);
+          setSavedReviewIds(
+            Object.fromEntries(Object.keys(savedDrafts).map((id) => [id, true]))
+          );
+        })
+        .catch((err) => {
+          setError(getErrorMessage(err, "Could not load saved reply drafts."));
+        });
+    }
   }, [businessId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const generateReply = async (review) => {
