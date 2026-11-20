@@ -105,6 +105,7 @@ export async function generateGoogleBusinessReviewReplyDraft(req, res) {
     const existingDraft = await GoogleReviewReplyDraft.findOne({
       userId: req.user._id,
       businessId: context.business._id,
+      googleLocationName: context.mapping.googleLocationName,
       reviewId: req.params.reviewId,
     }).select("status");
 
@@ -128,7 +129,9 @@ export async function generateGoogleBusinessReviewReplyDraft(req, res) {
       {
         userId: req.user._id,
         businessId: context.business._id,
+        googleLocationName: context.mapping.googleLocationName,
         reviewId: req.params.reviewId,
+        status: { $nin: ["published", "publishing"] },
       },
       {
         $set: {
@@ -153,6 +156,9 @@ export async function generateGoogleBusinessReviewReplyDraft(req, res) {
     });
   } catch (error) {
     console.error("Generate Google review reply draft error:", error.message);
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "This reply was published or is being published. Refresh before making changes." });
+    }
     return res.status(502).json({
       message: error.message || "Could not generate a review reply. Please try again.",
     });
