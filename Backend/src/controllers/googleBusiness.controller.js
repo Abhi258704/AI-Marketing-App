@@ -303,8 +303,8 @@ export async function saveGoogleBusinessLocationMapping(req, res) {
       typeof accountName !== "string" ||
       !/^accounts\/[A-Za-z0-9_-]+$/.test(accountName) ||
       typeof locationName !== "string" ||
-      !new RegExp("^" + accountName.replace(/[.*+?^${}()|[\]\\]/g, "\\
-export async function getGoogleBusinessConnection(req, res) {") + "/locations/[A-Za-z0-9_-]+$").test(locationName)
+      !locationName.startsWith(accountName + "/locations/") ||
+      !/^[A-Za-z0-9_-]+$/.test(locationName.slice((accountName + "/locations/").length))
     ) {
       return res.status(400).json({ message: "A valid Google account and location are required." });
     }
