@@ -33,7 +33,7 @@ export default function GoogleReviewsPage() {
   const [drafts, setDrafts] = useState({});
   const [draftErrors, setDraftErrors] = useState({});
   const [generatingReviewId, setGeneratingReviewId] = useState("");
-  const [copiedReviewId, setCopiedReviewId] = useState("");
+  const [copiedReviewId, setCopiedReviewId] = useState("");\n  const [savingReviewId, setSavingReviewId] = useState("");\n  const [savedReviewIds, setSavedReviewIds] = useState({});
 
   const loadReviews = useCallback(async ({ append = false } = {}) => {
     if (!businessId) return;
@@ -84,7 +84,7 @@ export default function GoogleReviewsPage() {
     }
   };
 
-  const copyDraft = async (reviewId) => {
+  const saveDraft = async (reviewId) => {\n    setSavingReviewId(reviewId);\n    setDraftErrors((current) => ({ ...current, [reviewId]: "" }));\n    try {\n      const result = await saveGoogleBusinessReviewReplyDraft(businessId, reviewId, drafts[reviewId]);\n      setDrafts((current) => ({ ...current, [reviewId]: result.reply }));\n      setSavedReviewIds((current) => ({ ...current, [reviewId]: true }));\n    } catch (err) {\n      setDraftErrors((current) => ({ ...current, [reviewId]: getErrorMessage(err, "Could not save this draft.") }));\n    } finally {\n      setSavingReviewId("");\n    }\n  };\n\n  const copyDraft = async (reviewId) => {
     try {
       await navigator.clipboard.writeText(drafts[reviewId] || "");
       setCopiedReviewId(reviewId);
