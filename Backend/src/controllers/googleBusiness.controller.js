@@ -336,7 +336,7 @@ export async function saveGoogleBusinessLocationMapping(req, res) {
       businessId: { $ne: business._id },
     });
     if (conflictingMapping) {
-      return res.status(409).json({ message: "This Google Business location is already linked to another business in your workspace." });
+      return res.status(409).json({ message: "This Google Business location is already linked to another app business." });
     }
 
     const mapping = await GoogleBusinessLocation.findOneAndUpdate(
