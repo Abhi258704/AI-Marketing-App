@@ -29,3 +29,8 @@ export const deleteGoogleBusinessLocationMapping = (businessId) =>
   apiFetch(`/api/google-business/businesses/${encodeURIComponent(businessId)}/location`, {
     method: "DELETE",
   });
+
+export const listGoogleBusinessReviews = (businessId, pageToken) =>
+  apiFetch(`/api/google-business/businesses/${encodeURIComponent(businessId)}/reviews`, {
+    query: pageToken ? { pageToken } : undefined,
+  });
