@@ -10,6 +10,7 @@ import {
   generateGoogleBusinessReviewReplyDraft,
   listGoogleBusinessReviewReplyDrafts,
   saveGoogleBusinessReviewReplyDraft,
+  publishGoogleBusinessReviewReply,
   listGoogleBusinessReviews,
 } from "@/lib/api/google-business";
 import { getErrorMessage } from "@/lib/api/client";
@@ -38,6 +39,8 @@ export default function GoogleReviewsPage() {
   const [copiedReviewId, setCopiedReviewId] = useState("");
   const [savingReviewId, setSavingReviewId] = useState("");
   const [savedReviewIds, setSavedReviewIds] = useState({});
+  const [publishedReviewIds, setPublishedReviewIds] = useState({});
+  const [publishingReviewId, setPublishingReviewId] = useState("");
   const [showingMockReviews, setShowingMockReviews] = useState(false);
   const isDevelopment = process.env.NODE_ENV !== "production";
 
@@ -66,6 +69,7 @@ export default function GoogleReviewsPage() {
     setDrafts({});
     setDraftErrors({});
     setSavedReviewIds({});
+    setPublishedReviewIds({});
     if (businessId) {
       loadReviews();
       listGoogleBusinessReviewReplyDrafts(businessId)
@@ -75,6 +79,9 @@ export default function GoogleReviewsPage() {
             savedDrafts[draft.reviewId] = draft.reply;
           });
           setDrafts(savedDrafts);
+          setPublishedReviewIds(
+            Object.fromEntries((result.drafts || []).filter((draft) => draft.status === "published").map((draft) => [draft.reviewId, true]))
+          );
           setSavedReviewIds(
             Object.fromEntries(Object.keys(savedDrafts).map((id) => [id, true]))
           );
@@ -119,6 +126,35 @@ export default function GoogleReviewsPage() {
       setDraftErrors((current) => ({ ...current, [reviewId]: getErrorMessage(err, "Could not save this draft.") }));
     } finally {
       setSavingReviewId("");
+    }
+  };
+
+  const publishReply = async (review) => {
+    const reviewId = review.reviewId || review.name;
+    if (!businessId || !reviewId || review.isMock || !savedReviewIds[reviewId] || publishedReviewIds[reviewId]) return;
+
+    const warning = review.reviewReply?.comment
+      ? "This review already has an owner reply. Publishing will replace that existing reply with the saved draft. Continue?"
+      : "This will publish the saved reply publicly on Google. Continue?";
+    if (!window.confirm(warning)) return;
+
+    setPublishingReviewId(reviewId);
+    setDraftErrors((current) => ({ ...current, [reviewId]: "" }));
+    try {
+      await publishGoogleBusinessReviewReply(businessId, reviewId);
+      setPublishedReviewIds((current) => ({ ...current, [reviewId]: true }));
+      setReviews((current) => current.map((item) =>
+        (item.reviewId || item.name) === reviewId
+          ? { ...item, reviewReply: { comment: drafts[reviewId], updateTime: new Date().toISOString() } }
+          : item
+      ));
+    } catch (err) {
+      setDraftErrors((current) => ({
+        ...current,
+        [reviewId]: getErrorMessage(err, "Could not publish this reply."),
+      }));
+    } finally {
+      setPublishingReviewId("");
     }
   };
 
@@ -206,9 +242,10 @@ export default function GoogleReviewsPage() {
                   className="w-full rounded-lg border border-line-strong bg-surface p-3 text-sm leading-6 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15"
                 />
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs text-muted">Draft only · Not published · {savedReviewIds[reviewId] ? "Saved" : "Unsaved"} · {draft.length}/1500</span>
+                  <span className="text-xs text-muted">{publishedReviewIds[reviewId] ? "Published to Google" : `Draft only · ${savedReviewIds[reviewId] ? "Saved" : "Unsaved"}`} · {draft.length}/1500</span>
                   <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="secondary" onClick={() => saveDraft(reviewId)} loading={savingReviewId === reviewId} disabled={!draft.trim() || Boolean(savingReviewId)}>Save draft</Button>
+                    <Button size="sm" variant="secondary" onClick={() => saveDraft(reviewId)} loading={savingReviewId === reviewId} disabled={!draft.trim() || Boolean(savingReviewId) || Boolean(publishedReviewIds[reviewId])}>Save draft</Button>
+                    {!review.isMock && <Button size="sm" onClick={() => publishReply(review)} loading={publishingReviewId === reviewId} disabled={!savedReviewIds[reviewId] || Boolean(publishedReviewIds[reviewId]) || Boolean(publishingReviewId)}>{publishedReviewIds[reviewId] ? "Published" : "Approve & publish"}</Button>}
                     <Button size="sm" onClick={() => copyDraft(reviewId)}><Copy className="h-4 w-4" /> {copiedReviewId === reviewId ? <><Check className="h-4 w-4" /> Copied</> : "Copy draft"}</Button>
                   </div>
                 </div>
