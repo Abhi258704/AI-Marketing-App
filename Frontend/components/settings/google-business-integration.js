@@ -30,6 +30,46 @@ export function GoogleBusinessIntegration() {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [demoMode, setDemoMode] = useState(false);
+  const isDevelopment = process.env.NODE_ENV !== "production";
+
+  const demoAccountName = "accounts/demo-account-001";
+  const demoLocations = [
+    {
+      name: "accounts/demo-account-001/locations/demo-location-001",
+      title: `${activeBusiness?.name || "Sample Business"} - Main Location (DEMO)`,
+      storefrontAddress: { addressLines: ["123 Demo Street", "Ahmedabad, Gujarat"] },
+    },
+    {
+      name: "accounts/demo-account-001/locations/demo-location-002",
+      title: `${activeBusiness?.name || "Sample Business"} - Second Location (DEMO)`,
+      storefrontAddress: { addressLines: ["456 Sample Road", "Surat, Gujarat"] },
+    },
+  ];
+
+  const enterDemoMode = () => {
+    setDemoMode(true);
+    setError("");
+    setNotice("Demo mode is active. Changes stay in this browser session and are never sent to Google or the backend.");
+    setConnection({ status: "connected", googleName: "Demo Google Account", googleEmail: "demo@example.test" });
+    setAccounts([{ name: demoAccountName, accountName: "Demo Business Account", type: "PERSONAL" }]);
+    setAccountName("");
+    setLocations([]);
+    setSelectedLocationName("");
+    setMapping(null);
+  };
+
+  const exitDemoMode = () => {
+    setDemoMode(false);
+    setConnection(null);
+    setAccounts([]);
+    setLocations([]);
+    setAccountName("");
+    setSelectedLocationName("");
+    setMapping(null);
+    setNotice("");
+    loadConnection();
+  };
 
   const loadConnection = useCallback(async () => {
     setLoading(true);
@@ -64,7 +104,7 @@ export function GoogleBusinessIntegration() {
       setAccountName("");
       setSelectedLocationName("");
       setNotice("");
-      if (!businessId || connection?.status !== "connected") return;
+      if (demoMode || !businessId || connection?.status !== "connected") return;
       try {
         const result = await getGoogleBusinessLocationMapping(businessId);
         if (cancelled) return;
@@ -84,7 +124,7 @@ export function GoogleBusinessIntegration() {
     }
     loadMapping();
     return () => { cancelled = true; };
-  }, [businessId, connection?.status]);
+  }, [businessId, connection?.status, demoMode]);
 
   const handleConnect = async () => {
     setBusy("connect");
@@ -104,6 +144,10 @@ export function GoogleBusinessIntegration() {
     setSelectedLocationName("");
     setLocations([]);
     if (!value) return;
+    if (demoMode) {
+      setLocations(demoLocations);
+      return;
+    }
     setBusy("locations");
     setError("");
     try {
@@ -118,6 +162,12 @@ export function GoogleBusinessIntegration() {
 
   const handleSaveMapping = async () => {
     if (!businessId || !accountName || !selectedLocationName) return;
+    if (demoMode) {
+      const chosen = demoLocations.find((location) => location.name === selectedLocationName);
+      setMapping(chosen ? { ...chosen, locationTitle: chosen.title, googleAccountName: accountName, googleLocationName: chosen.name } : null);
+      setNotice("Demo location linked to this business locally. No Google or backend data was changed.");
+      return;
+    }
     setBusy("save");
     setError("");
     setNotice("");
@@ -137,6 +187,12 @@ export function GoogleBusinessIntegration() {
 
   const handleUnlink = async () => {
     if (!businessId || !window.confirm("Unlink this Google location from the selected business?")) return;
+    if (demoMode) {
+      setMapping(null);
+      setSelectedLocationName("");
+      setNotice("Demo location unlinked locally. No Google or backend data was changed.");
+      return;
+    }
     setBusy("unlink");
     setError("");
     setNotice("");
@@ -177,21 +233,23 @@ export function GoogleBusinessIntegration() {
       <CardHeader
         title="Google Business Profile"
         description={activeBusiness ? `Connect the Google listing for ${activeBusiness.name}.` : "Select a business before connecting a Google listing."}
-        action={connection?.status === "connected" ? <Badge tone="success">Connected</Badge> : <Badge>Not connected</Badge>}
+        action={demoMode ? <Badge tone="warning">DEMO MODE</Badge> : connection?.status === "connected" ? <Badge tone="success">Connected</Badge> : <Badge>Not connected</Badge>}
       />
       <CardBody className="space-y-4">
+        {demoMode && <Alert tone="warning" title="Demo mode — no live Google access">Sample accounts and locations only. Linking and unlinking are local UI simulations; nothing is written to Google or the backend.</Alert>}
         {error && <Alert tone="danger" title="Google Business Profile">{error}</Alert>}
         {notice && <Alert tone="success" title="Google Business Profile">{notice}</Alert>}
-        {loading ? (
+        {isDevelopment && <div className="flex flex-wrap items-center gap-2"><Button size="sm" variant="secondary" onClick={demoMode ? exitDemoMode : enterDemoMode}>{demoMode ? "Exit demo mode" : "Preview with demo data"}</Button><span className="text-xs text-muted">Development only</span></div>}
+        {loading && !demoMode ? (
           <div className="flex items-center gap-2 text-sm text-muted"><Spinner /> Checking connection…</div>
-        ) : connection?.status === "connected" ? (
+        ) : demoMode || connection?.status === "connected" ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-medium">{connection.googleName || "Google account"}</p>
-                <p className="text-sm text-muted">{connection.googleEmail || "Connected Google account"}</p>
+                <p className="text-sm font-medium">{demoMode ? "Demo Google Account" : connection.googleName || "Google account"}</p>
+                <p className="text-sm text-muted">{demoMode ? "demo@example.test" : connection.googleEmail || "Connected Google account"}</p>
               </div>
-              <Button variant="secondary" size="sm" onClick={loadConnection} disabled={Boolean(busy)}>
+              <Button variant="secondary" size="sm" onClick={demoMode ? () => { setLocations(accountName ? demoLocations : []); setNotice("Demo data refreshed locally."); } : loadConnection} disabled={Boolean(busy)}>
                 <RefreshCw className="h-4 w-4" /> Refresh
               </Button>
             </div>
@@ -228,12 +286,12 @@ export function GoogleBusinessIntegration() {
               </div>
             )}
             <div className="border-t border-line pt-3">
-              <Button variant="danger-outline" size="sm" onClick={handleDisconnect} loading={busy === "disconnect"} disabled={Boolean(busy)}><Unlink className="h-4 w-4" /> Disconnect Google</Button>
+              {!demoMode && <Button variant="danger-outline" size="sm" onClick={handleDisconnect} loading={busy === "disconnect"} disabled={Boolean(busy)}><Unlink className="h-4 w-4" /> Disconnect Google</Button>}
             </div>
           </>
         ) : (
           <div className="flex flex-col items-start gap-3">
-            <p className="text-sm text-muted">Connect the Google account that has Owner or Manager access to your business listing. You can choose the account and location after authorizing.</p>
+            <p className="text-sm text-muted">Connect the Google account that has Owner or Manager access to your business listing. You can choose the account and location after authorizing, or preview the interface using demo data.</p>
             <Button onClick={handleConnect} loading={busy === "connect"} disabled={!activeBusiness || Boolean(busy)}><Link2 className="h-4 w-4" /> Connect Google Business</Button>
             {!activeBusiness && <p className="text-xs text-muted">Create or select a business first.</p>}
           </div>
