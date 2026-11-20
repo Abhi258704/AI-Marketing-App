@@ -197,8 +197,8 @@ export async function publishGoogleBusinessReviewReplyDraft(req, res) {
     const reviewId = req.params.reviewId;
     if (
       typeof reviewId !== "string" ||
-      !/^[A-Za-z0-9_-]+$/.test(reviewId) ||
-      reviewId.startsWith("dev-mock-")
+      !reviewId.startsWith(`${context.mapping.googleAccountName}/${context.mapping.googleLocationName}/reviews/`) ||
+      !/^[A-Za-z0-9_=-]+$/.test(reviewId.split("/").at(-1) || "")
     ) {
       return res.status(400).json({ message: "Only real Google reviews can be published." });
     }
