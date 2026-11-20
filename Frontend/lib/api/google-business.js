@@ -22,7 +22,7 @@ export const getGoogleBusinessLocationMapping = (businessId) =>
 export const saveGoogleBusinessLocationMapping = (businessId, mapping) =>
   apiFetch(`/api/google-business/businesses/${encodeURIComponent(businessId)}/location`, {
     method: "PUT",
-    body: JSON.stringify(mapping),
+    body: mapping,
   });
 
 export const deleteGoogleBusinessLocationMapping = (businessId) =>
