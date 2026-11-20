@@ -89,6 +89,30 @@ export async function fetchGoogleBusinessAccounts(accessToken) {
   );
 }
 
+export async function fetchGoogleBusinessReviews(accessToken, accountName, locationName, pageToken = "") {
+  if (!/^accounts\/[A-Za-z0-9_-]+$/.test(accountName)) {
+    throw new Error("Invalid Google Business account.");
+  }
+  if (!/^locations\/[A-Za-z0-9_-]+$/.test(locationName)) {
+    throw new Error("Invalid Google Business location.");
+  }
+
+  const response = await axios.get(
+    `https://mybusiness.googleapis.com/v4/${accountName}/${locationName}/reviews`,
+    {
+      headers: { Authorization: "Bearer " + accessToken },
+      params: {
+        pageSize: 50,
+        orderBy: "updateTime desc",
+        ...(pageToken ? { pageToken } : {}),
+      },
+      timeout: 20000,
+    }
+  );
+
+  return response.data || {};
+}
+
 export async function fetchGoogleBusinessLocations(accessToken, accountName) {
   if (!/^accounts\/[A-Za-z0-9_-]+$/.test(accountName)) {
     throw new Error("Invalid Google Business account.");
