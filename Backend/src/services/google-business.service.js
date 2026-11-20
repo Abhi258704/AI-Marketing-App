@@ -90,7 +90,7 @@ export async function fetchGoogleBusinessAccounts(accessToken) {
 }
 
 export async function fetchGoogleBusinessLocations(accessToken, accountName) {
-  if (!/^accounts\\/[A-Za-z0-9_-]+$/.test(accountName)) {
+  if (!/^accounts\/[A-Za-z0-9_-]+$/.test(accountName)) {
     throw new Error("Invalid Google Business account.");
   }
 
