@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import Business from "../models/business.model.js";
 import GoogleBusinessConnection from "../models/googleBusinessConnection.model.js";
 import { decryptGoogleBusinessToken } from "../services/google-business-crypto.service.js";
-import { getGoogleBusinessAccessToken, publishGoogleBusinessReviewReply } from "../services/google-business.service.js";
+import { getGoogleBusinessAccessToken, publishGoogleBusinessReviewReply, fetchGoogleBusinessReview } from "../services/google-business.service.js";
 import GoogleBusinessLocation from "../models/googleBusinessLocation.model.js";
 import GoogleReviewReplyDraft from "../models/googleReviewReplyDraft.model.js";
 import { generateGoogleReviewReply } from "../services/google-review-reply.service.js";
@@ -206,6 +206,79 @@ export async function saveGoogleBusinessReviewReplyDraft(req, res) {
   }
 }
 
+export async function reconcileGoogleBusinessReviewReplyDraft(req, res) {
+  try {
+    const context = await getReviewReplyContext(req.params.businessId, req.user._id);
+    if (context.error) {
+      return res.status(context.error.status).json({ message: context.error.message });
+    }
+
+    const reviewName = req.params.reviewId;
+    const expectedPrefix = `${context.mapping.googleAccountName}/${context.mapping.googleLocationName}/reviews/`;
+    if (
+      typeof reviewName !== "string" ||
+      !reviewName.startsWith(expectedPrefix) ||
+      !/^[A-Za-z0-9_=-]+$/.test(reviewName.slice(expectedPrefix.length))
+    ) {
+      return res.status(400).json({ message: "Only a real review from the mapped Google location can be checked." });
+    }
+
+    const draft = await GoogleReviewReplyDraft.findOne({
+      userId: req.user._id,
+      businessId: context.business._id,
+      googleLocationName: context.mapping.googleLocationName,
+      reviewId: reviewName,
+      status: "needs_reconciliation",
+    });
+    if (!draft) {
+      return res.status(404).json({ message: "There is no publishing attempt waiting for reconciliation." });
+    }
+
+    const connection = await GoogleBusinessConnection.findOne({
+      userId: req.user._id,
+      status: "connected",
+    }).select("+refreshTokenEncrypted");
+    if (!connection) {
+      return res.status(409).json({ message: "Reconnect Google Business Profile before checking publication status." });
+    }
+
+    const accessToken = await getGoogleBusinessAccessToken(connection, decryptGoogleBusinessToken);
+    const review = await fetchGoogleBusinessReview(
+      accessToken,
+      context.mapping.googleAccountName,
+      context.mapping.googleLocationName,
+      reviewName
+    );
+
+    const currentReply = review.reviewReply?.comment || "";
+    if (currentReply.trim() === draft.reply.trim()) {
+      draft.status = "published";
+      draft.publishedAt = review.reviewReply?.updateTime ? new Date(review.reviewReply.updateTime) : new Date();
+      draft.googleReplyUpdateTime = review.reviewReply?.updateTime || null;
+      await draft.save();
+      return res.status(200).json({
+        status: "published",
+        reviewReply: review.reviewReply,
+        message: "Google confirms that this reply is published.",
+      });
+    }
+
+    return res.status(200).json({
+      status: "needs_reconciliation",
+      currentReply,
+      message: currentReply
+        ? "Google currently shows a different reply. The draft remains locked; check again later before retrying."
+        : "Google does not currently show this reply. The draft remains locked; wait briefly and check again before retrying.",
+    });
+  } catch (error) {
+    console.error("Reconcile Google review reply error:", error.response?.data || error.message);
+    const status = error.response?.status;
+    return res.status(status === 401 ? 401 : status === 403 ? 403 : status === 404 ? 404 : 502).json({
+      message: error.response?.data?.error?.message || error.message || "Could not check the Google reply status.",
+    });
+  }
+}
+
 export async function publishGoogleBusinessReviewReplyDraft(req, res) {
   let claimFilter = null;
   try {
@@ -240,6 +313,9 @@ export async function publishGoogleBusinessReviewReplyDraft(req, res) {
     }
     if (existingDraft.status === "publishing") {
       return res.status(409).json({ message: "This reply is already being published. Refresh before retrying." });
+    }
+    if (existingDraft.status === "needs_reconciliation") {
+      return res.status(409).json({ message: "Check the reply's status on Google before attempting another publication." });
     }
     if (!existingDraft.reply?.trim() || Buffer.byteLength(existingDraft.reply, "utf8") > 4096) {
       return res.status(400).json({ message: "The saved reply is empty or exceeds Google's 4,096-byte limit." });
@@ -295,12 +371,13 @@ export async function publishGoogleBusinessReviewReplyDraft(req, res) {
 
     // A received HTTP error confirms Google rejected the request. A timeout
     // or network failure is ambiguous, so keep the lock to prevent duplicates.
-    if (claimFilter && status >= 400 && status < 500) {
+    if (claimFilter) {
+      const nextStatus = status >= 400 && status < 500 ? "draft" : "needs_reconciliation";
       await GoogleReviewReplyDraft.updateOne(
         claimFilter,
-        { $set: { status: "draft" } }
+        { $set: { status: nextStatus } }
       ).catch((resetError) => {
-        console.error("Could not reset rejected Google review publishing lock:", resetError.message);
+        console.error("Could not update Google review publishing state:", resetError.message);
       });
     }
     console.error("Publish Google review reply error:", error.response?.data || error.message);
