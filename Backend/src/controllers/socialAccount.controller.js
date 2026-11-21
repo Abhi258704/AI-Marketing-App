@@ -386,7 +386,7 @@ const instagramCallback = async (req, res) => {
 
         const frontendUrl = (
             process.env.FRONTEND_URL || "https://ai-marketing-app-sooty.vercel.app"
-        ).replace(/\\/+$/, "");
+        ).replace(/\/+$/, "");
 
         return res.redirect(
             302,
