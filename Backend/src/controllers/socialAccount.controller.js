@@ -332,8 +332,13 @@ const instagramCallback = async (req, res) => {
         );
 
         const instagramUsername = profileResponse.data.username;
+        const instagramUserId = profileResponse.data.user_id;
 
-        console.log("Instagram username:", instagramUsername);
+        if (!instagramUserId || !instagramUsername) {
+            throw new Error("Instagram profile response is missing its user ID or username");
+        }
+
+        // Use the profile endpoint's Instagram user ID for Graph API requests.
 
         // Calculate token expiry
         const tokenExpiresAt = new Date(
@@ -344,13 +349,14 @@ const instagramCallback = async (req, res) => {
         const existingAccount = await SocialAccount.findOne({
             businessId,
             platform: "instagram",
-            platformAccountId: user_id,
+            platformAccountId: { $in: [String(user_id), String(instagramUserId)] },
         });
 
         let socialAccount;
 
         // Update existing account
         if (existingAccount) {
+            existingAccount.platformAccountId = String(instagramUserId);
             existingAccount.accessToken = longLivedAccessToken;
             existingAccount.tokenExpiresAt = tokenExpiresAt;
             existingAccount.accountName = instagramUsername;
@@ -365,7 +371,7 @@ const instagramCallback = async (req, res) => {
             socialAccount = await SocialAccount.create({
                 businessId,
                 platform: "instagram",
-                platformAccountId: user_id,
+                platformAccountId: String(instagramUserId),
                 accountName: instagramUsername,
                 accessToken: longLivedAccessToken,
                 tokenExpiresAt,
