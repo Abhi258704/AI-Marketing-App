@@ -19,6 +19,10 @@ export const metadata = {
   },
   description:
     "Plan, create and publish marketing content, audit your business profile and track performance.",
+  icons: {
+    icon: "/ai-marketing-platform-meta-icon-1024.png",
+    apple: "/ai-marketing-platform-meta-icon-1024.png",
+  },
 };
 
 export default function RootLayout({ children }) {
