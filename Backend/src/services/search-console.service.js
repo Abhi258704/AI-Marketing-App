@@ -10,11 +10,11 @@ import {
 export const SEARCH_CONSOLE_READONLY_SCOPE = "https://www.googleapis.com/auth/webmasters.readonly";
 
 export function createSearchConsoleOAuthClient() {
-  const clientId = process.env.GOOGLE_CLIENT_ID;
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  const clientId = process.env.GOOGLE_SEARCH_CONSOLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_SEARCH_CONSOLE_CLIENT_SECRET;
   const redirectUri = process.env.GOOGLE_SEARCH_CONSOLE_REDIRECT_URI;
   if (!clientId || !clientSecret || !redirectUri) {
-    throw new Error("Google Search Console OAuth is not configured. Add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET and GOOGLE_SEARCH_CONSOLE_REDIRECT_URI to the backend environment.");
+    throw new Error("Google Search Console OAuth is not configured. Add GOOGLE_SEARCH_CONSOLE_CLIENT_ID, GOOGLE_SEARCH_CONSOLE_CLIENT_SECRET and GOOGLE_SEARCH_CONSOLE_REDIRECT_URI to the backend environment.");
   }
   return new OAuth2Client(clientId, clientSecret, redirectUri);
 }
