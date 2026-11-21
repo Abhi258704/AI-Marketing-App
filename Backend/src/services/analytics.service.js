@@ -30,6 +30,26 @@ const syncInstagramAnalytics = async ({ businessId, socialAccount }) => {
         businessId,
     });
 
+    // Verify that the stored long-lived token can still resolve its Instagram profile.
+    const profileResponse = await axios.get(
+        "https://graph.instagram.com/me",
+        {
+            params: {
+                fields: "user_id,username",
+                access_token: socialAccount.accessToken,
+            },
+        }
+    );
+
+    console.log("Instagram token profile diagnostic:", {
+        apiUserId: profileResponse.data.user_id,
+        apiUsername: profileResponse.data.username,
+        storedAccountId: socialAccount.platformAccountId,
+        idsMatch:
+            String(profileResponse.data.user_id) ===
+            String(socialAccount.platformAccountId),
+    });
+
     const response = await axios.get(
         `https://graph.instagram.com/v26.0/${socialAccount.platformAccountId}/insights`,
         {
