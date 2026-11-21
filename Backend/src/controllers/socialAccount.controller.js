@@ -295,7 +295,7 @@ const instagramCallback = async (req, res) => {
             }
         );
 
-        const { access_token, user_id } = tokenResponse.data;
+        const { access_token } = tokenResponse.data;
 
         console.log("Instagram short-lived access token received");
         console.log("Instagram user ID:", user_id);
@@ -338,17 +338,8 @@ const instagramCallback = async (req, res) => {
             throw new Error("Instagram profile response is missing its user ID or username");
         }
 
-        console.log("Instagram username:", instagramUsername);
-        console.log("Token exchange user ID:", user_id);
-        console.log("Profile user ID:", instagramUserId);
-        console.log(
-            "Instagram IDs match:",
-            String(user_id) === String(instagramUserId)
-        );
-
         // Use the profile endpoint's Instagram user ID for Graph API requests.
-        // The token-exchange user_id can differ from this API resource ID.
-        
+
         // Calculate token expiry
         const tokenExpiresAt = new Date(
             Date.now() + expires_in * 1000
@@ -358,7 +349,7 @@ const instagramCallback = async (req, res) => {
         const existingAccount = await SocialAccount.findOne({
             businessId,
             platform: "instagram",
-            platformAccountId: { $in: [String(user_id), String(instagramUserId)] },
+            platformAccountId: String(instagramUserId),
         });
 
         let socialAccount;
