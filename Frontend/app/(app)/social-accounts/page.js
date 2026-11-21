@@ -150,6 +150,23 @@ function SocialAccountsContent({ business }) {
 
   const accounts = data?.socialAccounts || [];
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connection") !== "instagram") return;
+
+    if (params.get("status") === "success") {
+      toast.success("Instagram connected successfully", {
+        message: "Your Instagram account is ready to use.",
+      });
+    } else if (params.get("status") === "error") {
+      toast.error("Instagram connection failed", {
+        message: params.get("message") || "Please try connecting again.",
+      });
+    }
+
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [toast]);
+
   async function start(platform) {
     setStarting(platform);
     setFlow(null);
