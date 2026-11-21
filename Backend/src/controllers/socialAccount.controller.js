@@ -295,7 +295,7 @@ const instagramCallback = async (req, res) => {
             }
         );
 
-        const { access_token } = tokenResponse.data;
+        const { access_token, user_id } = tokenResponse.data;
 
         console.log("Instagram short-lived access token received");
         console.log("Instagram user ID:", user_id);
@@ -349,7 +349,7 @@ const instagramCallback = async (req, res) => {
         const existingAccount = await SocialAccount.findOne({
             businessId,
             platform: "instagram",
-            platformAccountId: String(instagramUserId),
+            platformAccountId: { $in: [String(user_id), String(instagramUserId)] },
         });
 
         let socialAccount;
