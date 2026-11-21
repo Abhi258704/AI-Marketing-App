@@ -60,3 +60,9 @@ export const publishGoogleBusinessReviewReply = (businessId, reviewId) =>
     `/api/google-business/businesses/${encodeURIComponent(businessId)}/reviews/${encodeURIComponent(reviewId)}/publish-reply`,
     { method: "POST" }
   );
+
+export const reconcileGoogleBusinessReviewReply = (businessId, reviewId) =>
+  apiFetch(
+    `/api/google-business/businesses/${encodeURIComponent(businessId)}/reviews/${encodeURIComponent(reviewId)}/reconcile-reply`,
+    { method: "POST" }
+  );
