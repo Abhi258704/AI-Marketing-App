@@ -11,6 +11,7 @@ import {
   listGoogleBusinessReviewReplyDrafts,
   saveGoogleBusinessReviewReplyDraft,
   publishGoogleBusinessReviewReply,
+  reconcileGoogleBusinessReviewReply,
   listGoogleBusinessReviews,
 } from "@/lib/api/google-business";
 import { getErrorMessage } from "@/lib/api/client";
@@ -40,6 +41,8 @@ export default function GoogleReviewsPage() {
   const [savingReviewId, setSavingReviewId] = useState("");
   const [savedReviewIds, setSavedReviewIds] = useState({});
   const [publishedReviewIds, setPublishedReviewIds] = useState({});
+  const [reconciliationReviewIds, setReconciliationReviewIds] = useState({});
+  const [reconcilingReviewId, setReconcilingReviewId] = useState("");
   const [publishingReviewId, setPublishingReviewId] = useState("");
   const [showingMockReviews, setShowingMockReviews] = useState(false);
   const isDevelopment = process.env.NODE_ENV !== "production";
@@ -70,6 +73,7 @@ export default function GoogleReviewsPage() {
     setDraftErrors({});
     setSavedReviewIds({});
     setPublishedReviewIds({});
+    setReconciliationReviewIds({});
     if (businessId) {
       loadReviews();
       listGoogleBusinessReviewReplyDrafts(businessId)
@@ -81,6 +85,9 @@ export default function GoogleReviewsPage() {
           setDrafts(savedDrafts);
           setPublishedReviewIds(
             Object.fromEntries((result.drafts || []).filter((draft) => draft.status === "published").map((draft) => [draft.reviewId, true]))
+          );
+          setReconciliationReviewIds(
+            Object.fromEntries((result.drafts || []).filter((draft) => draft.status === "needs_reconciliation").map((draft) => [draft.reviewId, true]))
           );
           setSavedReviewIds(
             Object.fromEntries(Object.keys(savedDrafts).map((id) => [id, true]))
@@ -126,6 +133,32 @@ export default function GoogleReviewsPage() {
       setDraftErrors((current) => ({ ...current, [reviewId]: getErrorMessage(err, "Could not save this draft.") }));
     } finally {
       setSavingReviewId("");
+    }
+  };
+
+  const reconcileReply = async (review) => {
+    const reviewId = review.name || review.reviewId;
+    if (!businessId || !reviewId || !reconciliationReviewIds[reviewId]) return;
+
+    setReconcilingReviewId(reviewId);
+    setDraftErrors((current) => ({ ...current, [reviewId]: "" }));
+    try {
+      const result = await reconcileGoogleBusinessReviewReply(businessId, reviewId);
+      if (result.status === "published") {
+        setPublishedReviewIds((current) => ({ ...current, [reviewId]: true }));
+        setReconciliationReviewIds((current) => ({ ...current, [reviewId]: false }));
+        setReviews((current) => current.map((item) =>
+          (item.name || item.reviewId) === reviewId
+            ? { ...item, reviewReply: result.reviewReply || item.reviewReply }
+            : item
+        ));
+      } else {
+        setDraftErrors((current) => ({ ...current, [reviewId]: result.message || "Google has not confirmed publication yet. Check again later." }));
+      }
+    } catch (err) {
+      setDraftErrors((current) => ({ ...current, [reviewId]: getErrorMessage(err, "Could not check publication status.") }));
+    } finally {
+      setReconcilingReviewId("");
     }
   };
 
@@ -245,7 +278,8 @@ export default function GoogleReviewsPage() {
                   <span className="text-xs text-muted">{publishedReviewIds[reviewId] ? "Published to Google" : `Draft only · ${savedReviewIds[reviewId] ? "Saved" : "Unsaved"}`} · {draft.length}/1500</span>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="secondary" onClick={() => saveDraft(reviewId)} loading={savingReviewId === reviewId} disabled={!draft.trim() || Boolean(savingReviewId) || Boolean(publishedReviewIds[reviewId])}>Save draft</Button>
-                    {!review.isMock && <Button size="sm" onClick={() => publishReply(review)} loading={publishingReviewId === reviewId} disabled={!savedReviewIds[reviewId] || Boolean(publishedReviewIds[reviewId]) || Boolean(publishingReviewId)}>{publishedReviewIds[reviewId] ? "Published" : "Approve & publish"}</Button>}
+                    {!review.isMock && reconciliationReviewIds[reviewId] && <Button size="sm" variant="secondary" onClick={() => reconcileReply(review)} loading={reconcilingReviewId === reviewId} disabled={Boolean(reconcilingReviewId)}>Check Google status</Button>}
+                    {!review.isMock && !reconciliationReviewIds[reviewId] && <Button size="sm" onClick={() => publishReply(review)} loading={publishingReviewId === reviewId} disabled={!savedReviewIds[reviewId] || Boolean(publishedReviewIds[reviewId]) || Boolean(publishingReviewId)}>{publishedReviewIds[reviewId] ? "Published" : "Approve & publish"}</Button>}
                     <Button size="sm" onClick={() => copyDraft(reviewId)}><Copy className="h-4 w-4" /> {copiedReviewId === reviewId ? <><Check className="h-4 w-4" /> Copied</> : "Copy draft"}</Button>
                   </div>
                 </div>
