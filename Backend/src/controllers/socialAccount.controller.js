@@ -384,16 +384,14 @@ const instagramCallback = async (req, res) => {
         // the previous active account instead of leaving multiple accounts publishable.
         await keepOnlyInstagramAccount(businessId, socialAccount._id);
 
-        return res.status(200).json({
-            success: true,
-            message: "Instagram account connected successfully",
-            socialAccountId: socialAccount._id,
-            platform: socialAccount.platform,
-            platformAccountId: socialAccount.platformAccountId,
-            accountName: socialAccount.accountName,
-            status: socialAccount.status,
-            tokenExpiresAt: socialAccount.tokenExpiresAt,
-        });
+        const frontendUrl = (
+            process.env.FRONTEND_URL || "https://ai-marketing-app-sooty.vercel.app"
+        ).replace(/\/+$/, "");
+
+        return res.redirect(
+            302,
+            `${frontendUrl}/social-accounts?connection=instagram&status=success`
+        );
     } catch (error) {
         console.error(
             "Instagram token exchange error:",
