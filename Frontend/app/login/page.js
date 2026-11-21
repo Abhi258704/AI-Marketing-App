@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GoogleLogin } from "@react-oauth/google";
-import { Megaphone, CalendarClock, ClipboardCheck, Sparkles } from "lucide-react";
+import { CalendarClock, ClipboardCheck, Sparkles } from "lucide-react";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Alert, Spinner } from "@/components/ui/feedback";
 import { GOOGLE_CLIENT_ID } from "@/lib/config";
