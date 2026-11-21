@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Megaphone } from "lucide-react";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { cn } from "@/lib/cn";
 import { NAV_GROUPS } from "./nav-config";
 import { useNotifications } from "@/components/providers/notifications-provider";
