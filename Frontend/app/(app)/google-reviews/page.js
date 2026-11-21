@@ -275,7 +275,7 @@ export default function GoogleReviewsPage() {
                   className="w-full rounded-lg border border-line-strong bg-surface p-3 text-sm leading-6 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15"
                 />
                 <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs text-muted">{publishedReviewIds[reviewId] ? "Published to Google" : `Draft only · ${savedReviewIds[reviewId] ? "Saved" : "Unsaved"}`} · {draft.length}/1500</span>
+                  <span className="text-xs text-muted">{publishedReviewIds[reviewId] ? "Published to Google" : reconciliationReviewIds[reviewId] ? "Publication status uncertain · Check Google status" : `Draft only · ${savedReviewIds[reviewId] ? "Saved" : "Unsaved"}`} · {draft.length}/1500</span>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" variant="secondary" onClick={() => saveDraft(reviewId)} loading={savingReviewId === reviewId} disabled={!draft.trim() || Boolean(savingReviewId) || Boolean(publishedReviewIds[reviewId])}>Save draft</Button>
                     {!review.isMock && reconciliationReviewIds[reviewId] && <Button size="sm" variant="secondary" onClick={() => reconcileReply(review)} loading={reconcilingReviewId === reviewId} disabled={Boolean(reconcilingReviewId)}>Check Google status</Button>}
