@@ -115,6 +115,9 @@ export async function generateGoogleBusinessReviewReplyDraft(req, res) {
     if (existingDraft?.status === "publishing") {
       return res.status(409).json({ message: "This reply is currently being published. Refresh before trying again." });
     }
+    if (existingDraft?.status === "needs_reconciliation") {
+      return res.status(409).json({ message: "Check the reply's status on Google before regenerating this draft." });
+    }
 
     const reply = await generateGoogleReviewReply({
       businessName: context.business.name,
@@ -131,7 +134,7 @@ export async function generateGoogleBusinessReviewReplyDraft(req, res) {
         businessId: context.business._id,
         googleLocationName: context.mapping.googleLocationName,
         reviewId: req.params.reviewId,
-        status: { $nin: ["published", "publishing"] },
+        status: { $nin: ["published", "publishing", "needs_reconciliation"] },
       },
       {
         $set: {
