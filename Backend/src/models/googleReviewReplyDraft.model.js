@@ -31,7 +31,7 @@ const googleReviewReplyDraftSchema = new mongoose.Schema(
     reply: { type: String, required: true, trim: true, maxlength: 1500 },
     status: {
       type: String,
-      enum: ["draft", "approved", "publishing", "published"],
+      enum: ["draft", "approved", "publishing", "needs_reconciliation", "published"],
       default: "draft",
       index: true,
     },
