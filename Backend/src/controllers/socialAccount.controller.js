@@ -334,6 +334,12 @@ const instagramCallback = async (req, res) => {
         const instagramUsername = profileResponse.data.username;
 
         console.log("Instagram username:", instagramUsername);
+        console.log("Token exchange user ID:", user_id);
+        console.log("Profile user ID:", profileResponse.data.user_id);
+        console.log(
+            "Instagram IDs match:",
+            String(user_id) === String(profileResponse.data.user_id)
+        );
 
         // Calculate token expiry
         const tokenExpiresAt = new Date(
