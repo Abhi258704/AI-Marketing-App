@@ -3,7 +3,8 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GoogleLogin } from "@react-oauth/google";
-import { Megaphone, CalendarClock, ClipboardCheck, Sparkles } from "lucide-react";
+import { CalendarClock, ClipboardCheck, Sparkles } from "lucide-react";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { useAuth } from "@/components/providers/auth-provider";
 import { Alert, Spinner } from "@/components/ui/feedback";
 import { GOOGLE_CLIENT_ID } from "@/lib/config";
@@ -47,9 +48,7 @@ function LoginContent() {
     <div className="grid min-h-screen lg:grid-cols-2">
       <aside className="hidden flex-col justify-between bg-brand-800 p-12 text-white lg:flex">
         <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
-            <Megaphone className="h-5 w-5" aria-hidden />
-          </span>
+          <BrandMark className="h-11 w-11 shrink-0" />
           <span className="font-semibold">AI Marketing Platform</span>
         </div>
         <div>
@@ -71,9 +70,7 @@ function LoginContent() {
       <main className="flex items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center gap-2.5 lg:hidden">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-700 text-white">
-              <Megaphone className="h-5 w-5" aria-hidden />
-            </span>
+            <BrandMark className="h-11 w-11 shrink-0" />
             <span className="font-semibold">AI Marketing Platform</span>
           </div>
 

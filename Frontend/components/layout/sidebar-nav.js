@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Megaphone } from "lucide-react";
+import { BrandMark } from "@/components/ui/brand-mark";
 import { cn } from "@/lib/cn";
 import { NAV_GROUPS } from "./nav-config";
 import { useNotifications } from "@/components/providers/notifications-provider";
@@ -13,9 +13,7 @@ import { getPendingReviewCount } from "@/lib/api/reviews";
 export function Brand() {
   return (
     <Link href="/dashboard" className="flex items-center gap-2.5 px-2">
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-700 text-white">
-        <Megaphone className="h-4 w-4" aria-hidden />
-      </span>
+      <BrandMark className="h-9 w-9 shrink-0" />
       <span className="text-sm font-semibold leading-tight tracking-tight">
         AI Marketing
         <span className="block text-xs font-normal text-muted">Platform</span>
