@@ -113,6 +113,29 @@ export async function fetchGoogleBusinessReviews(accessToken, accountName, locat
   return response.data || {};
 }
 
+export async function fetchGoogleBusinessReview(accessToken, accountName, locationName, reviewName) {
+  if (!/^accounts\/[A-Za-z0-9_-]+$/.test(accountName)) {
+    throw new Error("Invalid Google Business account.");
+  }
+  if (!/^locations\/[A-Za-z0-9_-]+$/.test(locationName)) {
+    throw new Error("Invalid Google Business location.");
+  }
+  const expectedReviewPrefix = `${accountName}/${locationName}/reviews/`;
+  if (
+    typeof reviewName !== "string" ||
+    !reviewName.startsWith(expectedReviewPrefix) ||
+    !/^[A-Za-z0-9_=-]+$/.test(reviewName.slice(expectedReviewPrefix.length))
+  ) {
+    throw new Error("This is not a valid review for the mapped Google Business location.");
+  }
+
+  const response = await axios.get(`https://mybusiness.googleapis.com/v4/${reviewName}`, {
+    headers: { Authorization: "Bearer " + accessToken },
+    timeout: 20000,
+  });
+  return response.data || {};
+}
+
 export async function publishGoogleBusinessReviewReply(
   accessToken,
   accountName,
