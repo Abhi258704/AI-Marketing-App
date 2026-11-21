@@ -12,13 +12,14 @@ import { ConfirmDialog } from "@/components/ui/dialog";
 import { API_BASE_URL } from "@/lib/config";
 import { clearUserLocalData } from "@/lib/local-store";
 import { formatDateTime } from "@/lib/format";
+import { GoogleBusinessIntegration } from "@/components/settings/google-business-integration";
 
 const FEATURES = [
   { name: "Facebook Page publishing & insights", ok: true },
   { name: "Instagram publishing & insights", ok: true },
   { name: "AI content generation & business audit", ok: true },
-  { name: "Google Business Profile", ok: false, note: "Waiting for Google API approval." },
-  { name: "Customer reviews & replies", ok: false, note: "Needs Google Business Profile access and backend endpoints." },
+  { name: "Google Business Profile connection & location discovery", ok: true },
+  { name: "Google Business Profile reviews & replies", ok: false, note: "Connection is ready; review management endpoints are still pending." },
   { name: "SEO keyword rankings", ok: false, note: "Needs a data provider and backend endpoint." },
   { name: "Image upload", ok: false, note: "No upload endpoint yet. Use public image URLs." },
   { name: "Real-time notifications", ok: false, note: "Notifications refresh periodically; there is no push channel." },

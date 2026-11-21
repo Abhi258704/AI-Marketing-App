@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, ExternalLink, Globe2, Lock, RefreshCw } from "lucide-react";
+import { CheckCircle2, ExternalLink, RefreshCw } from "lucide-react";
 import { Facebook, Instagram } from "@/components/ui/brand-icons";
 import { RequireBusiness } from "@/components/layout/require-business";
 import { useToast } from "@/components/providers/toast-provider";
@@ -11,6 +11,7 @@ import { Alert, Badge, CardSkeleton, ErrorState } from "@/components/ui/feedback
 import { useApi } from "@/lib/use-api";
 import { getFacebookConnectUrl, getInstagramConnectUrl, keepInstagramAccount as keepInstagramAccountApi, listSocialAccounts } from "@/lib/api/social-accounts";
 import { getErrorMessage } from "@/lib/api/client";
+import { GoogleBusinessIntegration } from "@/components/settings/google-business-integration";
 import { formatDateTime } from "@/lib/format";
 
 const PLATFORM_CONFIG = {
@@ -246,20 +247,9 @@ function SocialAccountsContent({ business }) {
           <PlatformCard platform="facebook" accounts={accounts} business={business} pending={starting} onStart={start} />
           <PlatformCard platform="instagram" accounts={accounts} business={business} pending={starting} onStart={start} keeping={keeping} onKeep={chooseInstagramAccount} />
 
-          <Card className="border-dashed md:col-span-2">
-            <CardBody className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sunken"><Globe2 className="h-5 w-5 text-muted" aria-hidden /></span>
-                <div>
-                  <h2 className="flex items-center gap-2 text-sm font-semibold">Google Business Profile <Badge tone="warning"><Lock className="h-3 w-3" aria-hidden /> Coming soon</Badge></h2>
-                  <p className="mt-0.5 max-w-xl text-sm text-muted">
-                    Google hasn&apos;t approved this project&apos;s Business Profile API access yet, so connecting, posting, reviews and insights aren&apos;t available. This will be enabled once access is granted.
-                  </p>
-                </div>
-              </div>
-              <Button variant="secondary" size="sm" disabled>Unavailable</Button>
-            </CardBody>
-          </Card>
+          <div className="md:col-span-2">
+            <GoogleBusinessIntegration />
+          </div>
         </div>
       )}
 
