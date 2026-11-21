@@ -24,6 +24,12 @@ const syncInstagramAnalytics = async ({ businessId, socialAccount }) => {
     periodStart.setUTCDate(periodStart.getUTCDate() - 6);
     periodStart.setUTCHours(0, 0, 0, 0);
 
+    console.log("Instagram Insights diagnostic:", {
+        storedAccountId: socialAccount.platformAccountId,
+        accountName: socialAccount.accountName,
+        businessId,
+    });
+
     const response = await axios.get(
         `https://graph.instagram.com/v26.0/${socialAccount.platformAccountId}/insights`,
         {
