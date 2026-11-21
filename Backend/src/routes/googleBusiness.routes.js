@@ -17,6 +17,7 @@ import {
   listGoogleBusinessReviewReplyDrafts,
   saveGoogleBusinessReviewReplyDraft,
   publishGoogleBusinessReviewReplyDraft,
+  reconcileGoogleBusinessReviewReplyDraft,
 } from "../controllers/googleReviewReply.controller.js";
 
 const router = express.Router();
@@ -46,6 +47,10 @@ router.put(
 router.post(
   "/businesses/:businessId/reviews/:reviewId/publish-reply",
   publishGoogleBusinessReviewReplyDraft
+);
+router.post(
+  "/businesses/:businessId/reviews/:reviewId/reconcile-reply",
+  reconcileGoogleBusinessReviewReplyDraft
 );
 router.get("/businesses/:businessId/location", getGoogleBusinessLocationMapping);
 router.put("/businesses/:businessId/location", saveGoogleBusinessLocationMapping);
