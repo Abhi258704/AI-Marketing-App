@@ -14,24 +14,62 @@ import { promoteTemporaryMedia } from "./media-storage.service.js";
 
 
 const MAX_PUBLICATION_ATTEMPTS = 3;
+const PROCESSING_STALE_AFTER_MS = 10 * 60 * 1000;
 
 const processScheduledPosts = async () => {
     try {
-        const posts = await Post.find({
-            status: { $in: ["scheduled", "processing"] },
-            scheduledAt: { $lte: new Date() },
-        });
+        const now = new Date();
+        const staleProcessingBefore = new Date(
+            now.getTime() - PROCESSING_STALE_AFTER_MS
+        );
 
-        if (posts.length === 0) {
+        // Read candidate IDs only. Each post is claimed atomically immediately
+        // before processing so overlapping worker runs cannot publish it twice.
+        const candidates = await Post.find({
+            status: { $in: ["scheduled", "processing"] },
+            scheduledAt: { $lte: now },
+        })
+            .select("_id")
+            .lean();
+
+        if (candidates.length === 0) {
             return;
         }
 
-        console.log(`Found ${posts.length} scheduled post(s)`);
+        console.log(`Found ${candidates.length} scheduled post candidate(s)`);
 
-        for (const post of posts) {
+        for (const candidate of candidates) {
+            const post = await Post.findOneAndUpdate(
+                {
+                    _id: candidate._id,
+                    scheduledAt: { $lte: now },
+                    $or: [
+                        { status: "scheduled" },
+                        {
+                            status: "processing",
+                            processingStartedAt: { $lte: staleProcessingBefore },
+                        },
+                        {
+                            status: "processing",
+                            processingStartedAt: null,
+                        },
+                    ],
+                },
+                {
+                    $set: {
+                        status: "processing",
+                        processingStartedAt: new Date(),
+                    },
+                },
+                { returnDocument: "after" }
+            );
+
+            // Another worker claimed this post first, or it is not stale yet.
+            if (!post) {
+                continue;
+            }
+
             try {
-                post.status = "processing";
-                await post.save();
 
                 const business = await Business.findOne({
                     _id: post.businessId,
