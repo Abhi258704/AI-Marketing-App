@@ -19,9 +19,9 @@ const FEATURES = [
   { name: "Instagram publishing & insights", ok: true },
   { name: "AI content generation & business audit", ok: true },
   { name: "Google Business Profile connection & location discovery", ok: true },
-  { name: "Google Business Profile reviews & replies", ok: false, note: "Connection is ready; review management endpoints are still pending." },
+  { name: "Google Business Profile reviews & replies", ok: true, note: "Fetch reviews, generate and save AI reply drafts, and publish approved replies." },
   { name: "SEO keyword rankings", ok: false, note: "Needs a data provider and backend endpoint." },
-  { name: "Image upload", ok: false, note: "No upload endpoint yet. Use public image URLs." },
+  { name: "Image upload", ok: true, note: "Upload JPG/PNG images up to 8 MB; temporary uploads are promoted to Cloudinary when scheduled or published." },
   { name: "Real-time notifications", ok: false, note: "Notifications refresh periodically; there is no push channel." },
 ];
 
