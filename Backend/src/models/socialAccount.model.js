@@ -37,6 +37,10 @@ const socialAccountSchema = new mongoose.Schema(
       default: null,
     },
 
+    accessTokenEncrypted: { type: mongoose.Schema.Types.Mixed, default: null },
+
+    refreshTokenEncrypted: { type: mongoose.Schema.Types.Mixed, default: null },
+
     tokenExpiresAt: {
       type: Date,
       default: null,
@@ -55,6 +59,24 @@ const socialAccountSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    toJSON: {
+      transform(_doc, ret) {
+        delete ret.accessToken;
+        delete ret.refreshToken;
+        delete ret.accessTokenEncrypted;
+        delete ret.refreshTokenEncrypted;
+        return ret;
+      },
+    },
+    toObject: {
+      transform(_doc, ret) {
+        delete ret.accessToken;
+        delete ret.refreshToken;
+        delete ret.accessTokenEncrypted;
+        delete ret.refreshTokenEncrypted;
+        return ret;
+      },
+    },
   }
 );
 
