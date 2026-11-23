@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "migrate:social-tokens": "node src/scripts/migrate-social-account-tokens.js"
   },
   "keywords": [],
   "author": "",
