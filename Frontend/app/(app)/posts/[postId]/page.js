@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CalendarClock, CalendarX2, CloudUpload, Pencil, RefreshCw, Send, Trash2 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
+import { API_BASE_URL } from "@/lib/config";
 import { useBusiness } from "@/components/providers/business-provider";
 import { useToast } from "@/components/providers/toast-provider";
 import { MediaPreview, PostForm } from "@/components/posts/post-form";
@@ -217,7 +218,7 @@ export default function PostDetailPage({ params }) {
                   {post.mediaUrls.map((url, index) => (
                     <div key={url + "-" + index} className="space-y-1.5">
                       <MediaPreview url={url} className="h-28 w-28" />
-                      <a href={url} target="_blank" rel="noopener noreferrer" className="block max-w-28 truncate text-xs text-brand-700 hover:underline">
+                      <a href={url.startsWith("/temp/") ? `${API_BASE_URL}${url}` : url} target="_blank" rel="noopener noreferrer" className="block max-w-28 truncate text-xs text-brand-700 hover:underline">
                         Open image
                       </a>
                     </div>
