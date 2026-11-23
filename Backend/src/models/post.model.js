@@ -54,6 +54,12 @@ const postSchema = new mongoose.Schema(
             type: Date,
             default: null,
         },
+
+        // Timestamp used to recover posts abandoned by a crashed worker.
+        processingStartedAt: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: true,
