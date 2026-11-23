@@ -176,7 +176,7 @@ const processScheduledPosts = async () => {
                                     instagramAccountId:
                                         socialAccount.platformAccountId,
                                     accessToken:
-                                        socialAccount.accessToken,
+                                        getSocialAccountToken(socialAccount, "accessToken"),
                                     imageUrl: post.mediaUrls[0],
                                     caption: post.content,
                                 });
@@ -188,7 +188,7 @@ const processScheduledPosts = async () => {
                                     await getInstagramMediaContainerStatus({
                                         containerId: container.id,
                                         accessToken:
-                                            socialAccount.accessToken,
+                                            getSocialAccountToken(socialAccount, "accessToken"),
                                     });
 
                                 if (
@@ -225,7 +225,7 @@ const processScheduledPosts = async () => {
                                     instagramAccountId:
                                         socialAccount.platformAccountId,
                                     accessToken:
-                                        socialAccount.accessToken,
+                                        getSocialAccountToken(socialAccount, "accessToken"),
                                     containerId: container.id,
                                 });
 
