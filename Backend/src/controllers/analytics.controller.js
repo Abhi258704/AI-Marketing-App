@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import Business from "../models/business.model.js";
 import Analytics from "../models/analytics.model.js";
 import SocialAccount from "../models/socialAccount.model.js";
+import { getSocialAccountToken } from "../services/social-token-crypto.service.js";
 import {
     syncInstagramAnalytics,
     syncFacebookAnalytics,
@@ -132,6 +133,8 @@ const syncInstagramAnalyticsForBusiness = async (req, res) => {
             });
         }
 
+        socialAccount.accessToken = getSocialAccountToken(socialAccount, "accessToken");
+
         const result = await syncInstagramAnalytics({
             businessId: business._id,
             socialAccount,
@@ -191,6 +194,8 @@ const syncFacebookAnalyticsForBusiness = async (req, res) => {
                 message: "No connected Facebook Page found",
             });
         }
+
+        socialAccount.accessToken = getSocialAccountToken(socialAccount, "accessToken");
 
         const result = await syncFacebookAnalytics({
             businessId: business._id,
