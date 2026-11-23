@@ -10,6 +10,7 @@ import {
 } from "./instagram.service.js";
 import { createNotification } from "./notification.service.js";
 import { promoteTemporaryMedia } from "./media-storage.service.js";
+import { getSocialAccountToken } from "./social-token-crypto.service.js";
 
 
 
@@ -152,7 +153,7 @@ const processScheduledPosts = async () => {
                         if (socialAccount.platform === "facebook") {
                             const result = await createFacebookPost({
                                 pageId: socialAccount.platformAccountId,
-                                pageAccessToken: socialAccount.accessToken,
+                                pageAccessToken: getSocialAccountToken(socialAccount, "accessToken"),
                                 message: post.content,
                             });
 
