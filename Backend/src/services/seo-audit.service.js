@@ -586,7 +586,7 @@ export async function processQueuedWebsiteAudits() {
     const audit = await WebsiteAudit.findOneAndUpdate(
       { status: "queued" },
       { $set: { status: "running", startedAt: new Date(), errorMessage: null } },
-      { sort: { createdAt: 1 }, new: true }
+      { sort: { createdAt: 1 }, returnDocument: "after" }
     );
     if (!audit) return;
     try {
