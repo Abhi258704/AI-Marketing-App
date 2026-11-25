@@ -6,6 +6,7 @@ import {
   listGoogleBusinessAccounts,
   listGoogleBusinessLocations,
   listGoogleBusinessReviews,
+  getGoogleBusinessReviewLink,
   googleBusinessOAuthCallback,
   startGoogleBusinessConnection,
   getGoogleBusinessLocationMapping,
@@ -32,6 +33,7 @@ router.get("/connection", getGoogleBusinessConnection);
 router.get("/accounts", listGoogleBusinessAccounts);
 router.get("/accounts/:accountId/locations", listGoogleBusinessLocations);
 router.get("/businesses/:businessId/reviews", listGoogleBusinessReviews);
+router.get("/businesses/:businessId/review-link", getGoogleBusinessReviewLink);
 router.get(
   "/businesses/:businessId/review-reply-drafts",
   listGoogleBusinessReviewReplyDrafts
