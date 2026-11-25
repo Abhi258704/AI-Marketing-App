@@ -105,12 +105,18 @@ function DashboardContent({ business }) {
 
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {[["Facebook", fb], ["Instagram", ig]].map(([name, c]) => (
-          <Stat key={name} label={name} value={accounts.loading && !accounts.data ? "…" : c.label} hint={accounts.error ? "Couldn't check" : c.detail || undefined}>
-            {!accounts.loading && <Badge tone={c.tone} className="mt-2">{c.label}</Badge>}
-          </Stat>
+          <Link key={name} href="/social-accounts" className="block rounded-xl transition-shadow hover:shadow-md">
+            <Stat
+              label={name}
+              value={accounts.loading && !accounts.data ? "…" : c.label}
+              hint={accounts.error ? "Couldn't check" : c.label === "Connected" ? c.detail : c.label === "Needs reconnecting" ? "Reconnect now" : "Connect now"}
+            >
+              {!accounts.loading && <Badge tone={c.tone} className="mt-2">{c.label}</Badge>}
+            </Stat>
+          </Link>
         ))}
         <Link href="/social-accounts" className="block rounded-xl transition-shadow hover:shadow-md">
-          <Stat label="Google Business Profile" value={gbpStatus} hint={googleConnection.error ? "Retry in social accounts" : gbpDetail || "Manage Google connection"}>
+          <Stat label="Google Business Profile" value={gbpStatus}>
             {!googleConnection.loading && <Badge tone={googleConnection.error ? "danger" : gbpConnected ? "success" : "neutral"} className="mt-2">{gbpStatus}</Badge>}
           </Stat>
         </Link>
