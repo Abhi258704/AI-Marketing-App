@@ -1,38 +1,34 @@
 "use client";
 
-import { QrCode } from "lucide-react";
 import { useBusiness } from "@/components/providers/business-provider";
-import { FeedbackQrCard } from "@/components/business/feedback-qr-card";
 import { ButtonLink } from "@/components/ui/button";
 import { CardSkeleton, EmptyState, ErrorState } from "@/components/ui/feedback";
 import { PageHeader } from "@/components/ui/card";
+import { QrCode } from "lucide-react";
+import { GoogleReviewQrCard } from "@/components/business/google-review-qr-card";
 
-export default function FeedbackQrCodesPage() {
+export default function GoogleReviewQrPage() {
   const { activeBusiness, loading, error, refreshBusinesses } = useBusiness();
 
   return (
     <>
       <PageHeader
-        title="Feedback QR code"
-        description="Generate, download and share the feedback QR code for your currently selected business."
+        title="Google Review QR"
+        description="Let customers scan a code and leave a review directly on your Google Business Profile."
       />
-
       {loading && <CardSkeleton lines={5} />}
-
       {error && <ErrorState error={error} onRetry={refreshBusinesses} title="Couldn't load your business" />}
-
       {!loading && !error && !activeBusiness && (
         <EmptyState
           icon={QrCode}
           title="No current business selected"
-          description="Create or enable a business, then select it as your current business to generate its customer feedback QR code."
+          description="Create or enable a business, then select it to generate its Google review QR code."
           action={<ButtonLink href="/businesses">Go to businesses</ButtonLink>}
         />
       )}
-
       {!loading && !error && activeBusiness && (
-        <FeedbackQrCard
-          businessId={activeBusiness._id}
+        <GoogleReviewQrCard
+          businessId={activeBusiness._id || activeBusiness.id}
           businessName={activeBusiness.name}
         />
       )}
