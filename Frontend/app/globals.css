@@ -37,6 +37,25 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Use the hand cursor for anything that behaves like an interactive control. */
+:where(
+  a,
+  button:not(:disabled),
+  select:not(:disabled),
+  [role="button"],
+  [role="combobox"],
+  [role="option"],
+  [aria-haspopup],
+  summary,
+  label[for]
+) {
+  cursor: pointer;
+}
+
+:where(button:disabled, select:disabled, [aria-disabled="true"]) {
+  cursor: not-allowed;
+}
+
 /* Visible keyboard focus everywhere. */
 :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--color-brand-600);
