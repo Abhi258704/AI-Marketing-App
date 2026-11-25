@@ -126,7 +126,6 @@ function DashboardContent({ business }) {
                 <ArrowRight className="h-4 w-4" aria-hidden />
               </span>
             )}
-            {connected && <span className="mt-5 inline-flex items-center gap-2 text-sm font-medium text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Connected</span>}
           </Link>
         ))}
       </div>
