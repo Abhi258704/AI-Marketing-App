@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Copy, FilePlus2, ImagePlus, RefreshCw, RotateCcw, Sparkles, Wand2 } from "lucide-react";
 import { RequireBusiness } from "@/components/layout/require-business";
 import { useBusiness } from "@/components/providers/business-provider";
@@ -227,6 +228,7 @@ function CopyButton({ text, label, disabled }) {
 
 function StudioContent({ business }) {
   const toast = useToast();
+  const router = useRouter();
   const { user } = useAuth();
   const userId = user?.id;
   const { businesses, selectBusiness } = useBusiness();
@@ -561,7 +563,7 @@ function StudioContent({ business }) {
     if (!finalText) return;
     setSaving(true);
     try {
-      await createPost({
+      const result = await createPost({
         businessId: business._id,
         title: topic.trim().slice(0, 100) || null,
         content: finalText,
@@ -569,13 +571,13 @@ function StudioContent({ business }) {
         platforms: [producedFor?.platform || platform],
       });
 
+      const postId = result?.post?._id;
+      if (!postId) throw new Error("The draft was saved, but its details page couldn't be opened. Find it in All Posts.");
+
       // The Post now owns the staged image. Clear the editor but do not delete that media.
       resetFields({ keepStagedImage: true });
-      toast.success("Saved as a draft", {
-        message: generatedImageUrl
-          ? "Your AI-generated image was attached. The fields are ready for your next post."
-          : "Your draft is saved. The fields are ready for your next post.",
-      });
+      toast.success("Draft saved", { message: "Opening your post details…" });
+      router.push(`/posts/${postId}`);
     } catch (e) {
       toast.error("Couldn't save the draft", { message: getErrorMessage(e) });
     } finally {
