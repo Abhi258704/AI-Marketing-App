@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight, Plus, X } from "lucide-react";
 import { RequireBusiness } from "@/components/layout/require-business";
 import { PlatformBadges, PostStatusBadge } from "@/components/posts/post-badges";
 import { usePublicationRecords } from "@/components/posts/use-publication-record";
@@ -25,7 +25,7 @@ const dayFmt = new Intl.DateTimeFormat(undefined, { weekday: "long", month: "lon
 
 function buildMonthGrid(year, month) {
   const first = new Date(year, month, 1);
-  const offset = (first.getDay() + 6) % 7; // Monday-first
+  const offset = (first.getDay() + 6) % 7;
   const start = new Date(year, month, 1 - offset);
   return Array.from({ length: 42 }, (_, i) => new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
 }
@@ -35,10 +35,10 @@ function CalendarContent({ business }) {
   const today = new Date();
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [selected, setSelected] = useState(toDateInputValue(today));
+  const [dayDialogOpen, setDayDialogOpen] = useState(false);
 
   const posts = useMemo(() => (data?.posts || []).filter((p) => p.businessId === business._id), [data, business._id]);
   const records = usePublicationRecords(posts);
-
   const scheduled = useMemo(
     () => posts.filter((p) => p.scheduledAt).map((p) => ({ ...p, eff: effectiveStatus(p, records[p._id]) })),
     [posts, records]
@@ -83,7 +83,7 @@ function CalendarContent({ business }) {
 
       {data && (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="space-y-6">
+          <div>
             <Card>
               <div className="flex items-center justify-between border-b border-line px-4 py-3">
                 <h2 className="text-base font-semibold" aria-live="polite">{monthFmt.format(new Date(cursor.year, cursor.month, 1))}</h2>
@@ -107,7 +107,7 @@ function CalendarContent({ business }) {
                         <button
                           key={key}
                           type="button"
-                          onClick={() => setSelected(key)}
+                          onClick={() => { setSelected(key); setDayDialogOpen(true); }}
                           aria-label={`${dayFmt.format(date)}, ${items.length} post${items.length === 1 ? "" : "s"}`}
                           aria-pressed={selected === key}
                           className={cn(
@@ -130,27 +130,6 @@ function CalendarContent({ business }) {
                   </div>
                 </div>
               </div>
-            </Card>
-
-            <Card>
-              <CardHeader title={dayFmt.format(selectedDate)} description={selectedPosts.length ? `${selectedPosts.length} post${selectedPosts.length === 1 ? "" : "s"}` : undefined} />
-              {selectedPosts.length === 0 ? (
-                <CardBody><p className="text-sm text-muted">Nothing scheduled for this day.</p></CardBody>
-              ) : (
-                <ul className="divide-y divide-line">
-                  {selectedPosts.map((p) => (
-                    <li key={p._id}>
-                      <Link href={`/posts/${p._id}`} className="flex flex-col gap-2 px-5 py-3 hover:bg-canvas sm:flex-row sm:items-center sm:justify-between">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{p.title || truncate(p.content, 70)}</p>
-                          <p className="text-xs text-muted">{timeFmt.format(new Date(p.scheduledAt))}</p>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2"><PlatformBadges platforms={p.platforms} /><PostStatusBadge status={p.eff.status} derived={p.eff.derived} /></div>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
             </Card>
           </div>
 
@@ -193,6 +172,40 @@ function CalendarContent({ business }) {
               )}
             </Card>
           </aside>
+        </div>
+      )}
+
+      {dayDialogOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-[2px]"
+          onMouseDown={(event) => { if (event.target === event.currentTarget) setDayDialogOpen(false); }}
+        >
+          <section role="dialog" aria-modal="true" aria-labelledby="calendar-day-dialog-title" className="flex max-h-[min(80vh,42rem)] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+              <div>
+                <h2 id="calendar-day-dialog-title" className="text-base font-semibold">{dayFmt.format(selectedDate)}</h2>
+                <p className="mt-1 text-sm text-muted">{selectedPosts.length} scheduled post{selectedPosts.length === 1 ? "" : "s"}</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setDayDialogOpen(false)} aria-label="Close schedule details"><X className="h-4 w-4" /></Button>
+            </div>
+            {selectedPosts.length === 0 ? (
+              <div className="px-5 py-8 text-center text-sm text-muted">Nothing scheduled for this day.</div>
+            ) : (
+              <ul className="overflow-y-auto divide-y divide-line">
+                {selectedPosts.map((p) => (
+                  <li key={p._id}>
+                    <Link href={`/posts/${p._id}`} onClick={() => setDayDialogOpen(false)} className="flex flex-col gap-2 px-5 py-4 transition-colors hover:bg-canvas sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{p.title || truncate(p.content, 70)}</p>
+                        <p className="mt-1 text-xs text-muted">{timeFmt.format(new Date(p.scheduledAt))}</p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2"><PlatformBadges platforms={p.platforms} /><PostStatusBadge status={p.eff.status} derived={p.eff.derived} /></div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
       )}
     </>
