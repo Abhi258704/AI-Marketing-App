@@ -399,6 +399,65 @@ export async function deleteGoogleBusinessLocationMapping(req, res) {
   }
 }
 
+
+export async function getGoogleBusinessReviewLink(req, res) {
+  try {
+    const business = await getOwnedBusiness(req.params.businessId, req.user._id);
+    if (!business) return res.status(404).json({ message: "Business not found." });
+
+    const mapping = await GoogleBusinessLocation.findOne({
+      businessId: business._id,
+      userId: req.user._id,
+    });
+    if (!mapping) {
+      return res.status(409).json({ message: "Link a Google Business location to this business first." });
+    }
+
+    const connection = await getConnectedGoogleBusinessAccount(req.user._id);
+    if (!connection) {
+      return res.status(409).json({ message: "Connect Google Business Profile first." });
+    }
+
+    const accessToken = await getGoogleBusinessAccessToken(connection, decryptGoogleBusinessToken);
+    const locations = await fetchGoogleBusinessLocations(accessToken, mapping.googleAccountName);
+    const location = locations.find((item) => item.name === mapping.googleLocationName);
+    if (!location) {
+      return res.status(404).json({ message: "The linked Google Business location is no longer accessible. Re-link the location in Settings." });
+    }
+
+    const reviewUrl = location.metadata?.newReviewUri;
+    if (typeof reviewUrl !== "string") {
+      return res.status(409).json({ message: "Google has not provided a review link for this location. Confirm the listing is verified and try again." });
+    }
+
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(reviewUrl);
+    } catch {
+      return res.status(502).json({ message: "Google returned an invalid review link." });
+    }
+    if (parsedUrl.protocol !== "https:" || !["search.google.com", "g.page"].includes(parsedUrl.hostname)) {
+      return res.status(502).json({ message: "Google returned an unsupported review link." });
+    }
+
+    return res.status(200).json({
+      reviewUrl: parsedUrl.toString(),
+      locationTitle: location.title || mapping.locationTitle,
+    });
+  } catch (error) {
+    console.error("Get Google Business review link error:", error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      await GoogleBusinessConnection.updateOne(
+        { userId: req.user._id },
+        { $set: { status: "reauthorization_required", lastError: "Google authorization needs to be renewed." } }
+      );
+    }
+    return res.status(error.response?.status === 403 ? 403 : 502).json({
+      message: error.response?.data?.error?.message || safeGoogleError(error),
+    });
+  }
+}
+
 export async function listGoogleBusinessReviews(req, res) {
   try {
     const business = await getOwnedBusiness(req.params.businessId, req.user._id);
