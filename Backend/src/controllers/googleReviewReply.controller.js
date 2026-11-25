@@ -147,7 +147,7 @@ export async function generateGoogleBusinessReviewReplyDraft(req, res) {
           generatedByAI: true,
         },
       },
-      { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+      { upsert: true, returnDocument: "after", runValidators: true, setDefaultsOnInsert: true }
     );
 
     return res.status(200).json({
@@ -189,7 +189,7 @@ export async function saveGoogleBusinessReviewReplyDraft(req, res) {
         status: { $in: ["draft", "approved"] },
       },
       { $set: { reply, generatedByAI: false } },
-      { new: true, runValidators: true }
+      { returnDocument: "after", runValidators: true }
     );
 
     if (!draft) {
@@ -340,7 +340,7 @@ export async function publishGoogleBusinessReviewReplyDraft(req, res) {
     const claimedDraft = await GoogleReviewReplyDraft.findOneAndUpdate(
       { ...draftFilter, status: "draft" },
       { $set: { status: "publishing" } },
-      { new: true }
+      { returnDocument: "after" }
     );
     if (!claimedDraft) {
       return res.status(409).json({ message: "This draft is no longer available to publish. Refresh and try again." });
