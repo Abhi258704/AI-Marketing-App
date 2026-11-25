@@ -219,13 +219,10 @@ const generateImage = async (req, res) => {
             });
         }
 
-        if (
-            caption !== undefined &&
-            (typeof caption !== "string" || caption.length > 500)
-        ) {
+        if (caption !== undefined && typeof caption !== "string") {
             return res.status(400).json({
                 success: false,
-                message: "Caption context must be 500 characters or fewer",
+                message: "Caption context must be text",
             });
         }
 
@@ -264,6 +261,13 @@ const generateImage = async (req, res) => {
             });
         }
 
+        // Captions can be much longer than a useful image brief. Keep a short excerpt
+        // as context instead of rejecting otherwise valid requests from businesses.
+        const captionContext =
+            typeof caption === "string" && caption.trim()
+                ? caption.trim().slice(0, 700)
+                : "Not provided";
+
         const promptParts = [
             "Create one original, polished commercial marketing image for a small business social media campaign.",
             "Make the composition square and suitable for a social media feed.",
@@ -272,11 +276,11 @@ const generateImage = async (req, res) => {
             "Business description: " + (business.description || "Not specified").slice(0, 300),
             "Platform: " + (typeof platform === "string" ? platform.slice(0, 40) : "Social media"),
             "Campaign topic: " + topic.trim(),
-            "Caption context: " + (typeof caption === "string" && caption.trim() ? caption.trim() : "Not provided"),
+            "Caption context (short excerpt): " + captionContext,
             "Visual direction: " + (typeof visualPrompt === "string" && visualPrompt.trim() ? visualPrompt.trim() : "Use a tasteful, professional visual style appropriate for the business."),
             "Use a clear focal point, strong composition, realistic lighting and a considered color palette.",
             "Do not invent prices, discounts, product specifications, addresses or contact information.",
-            "Do not add logos, watermarks, QR codes, interface mockups or unnecessary text.",
+            "Generate artwork only: absolutely no text, letters, numbers, words, typography, logos, watermarks, QR codes or interface mockups. Exact promotional copy is added separately by the app.",
         ];
 
         const prompt = promptParts.join("\n").slice(0, 2048);
