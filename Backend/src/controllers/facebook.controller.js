@@ -8,6 +8,7 @@ import PostPublication from "../models/postPublication.model.js";
 import Post from "../models/post.model.js";
 import Business from "../models/business.model.js";
 import { promoteTemporaryMedia } from "../services/media-storage.service.js";
+import { encryptSocialToken, getSocialAccountToken } from "../services/social-token-crypto.service.js";
 
 
 
@@ -98,7 +99,8 @@ const facebookCallback = async (req, res) => {
                 platform: "facebook",
                 platformAccountId: page.id,
                 accountName: page.name,
-                accessToken: page.access_token,
+                accessToken: null,
+                accessTokenEncrypted: encryptSocialToken(page.access_token),
                 status: "connected",
                 connectedAt: new Date(),
             },
@@ -224,7 +226,7 @@ const publishFacebookPost = async (req, res) => {
         // 8. Publish to Facebook
         const result = await createFacebookPost({
             pageId: socialAccount.platformAccountId,
-            pageAccessToken: socialAccount.accessToken,
+            pageAccessToken: getSocialAccountToken(socialAccount, "accessToken"),
             message: post.content,
         });
 

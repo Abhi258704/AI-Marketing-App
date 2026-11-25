@@ -3,6 +3,7 @@ import Post from "../models/post.model.js";
 import SocialAccount from "../models/socialAccount.model.js";
 import Business from "../models/business.model.js";
 import { promoteTemporaryMedia } from "../services/media-storage.service.js";
+import { getSocialAccountToken } from "../services/social-token-crypto.service.js";
 
 import {
     createInstagramMediaContainer,
@@ -97,14 +98,14 @@ const publishInstagramPost = async (req, res) => {
 
         const container = await createInstagramMediaContainer({
             instagramAccountId: socialAccount.platformAccountId,
-            accessToken: socialAccount.accessToken,
+            accessToken: getSocialAccountToken(socialAccount, "accessToken"),
             imageUrl: post.mediaUrls[0],
             caption: post.content,
         });
 
         const publishedMedia = await publishInstagramMediaContainer({
             instagramAccountId: socialAccount.platformAccountId,
-            accessToken: socialAccount.accessToken,
+            accessToken: getSocialAccountToken(socialAccount, "accessToken"),
             containerId: container.id,
         });
 

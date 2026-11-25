@@ -9,6 +9,7 @@ import SocialAccount from "../models/socialAccount.model.js";
 import PostPublication from "../models/postPublication.model.js";
 import { createFacebookPost } from "../services/facebook.service.js";
 import { promoteTemporaryMedia } from "../services/media-storage.service.js";
+import { getSocialAccountToken } from "../services/social-token-crypto.service.js";
 
 
 
@@ -126,7 +127,7 @@ const publishPost = async (req, res) => {
 
                 const result = await createFacebookPost({
                     pageId: socialAccount.platformAccountId,
-                    pageAccessToken: socialAccount.accessToken,
+                    pageAccessToken: getSocialAccountToken(socialAccount, "accessToken"),
                     message: post.content,
                 });
 
@@ -182,7 +183,7 @@ const publishPost = async (req, res) => {
 
                 const container = await createInstagramMediaContainer({
                     instagramAccountId: socialAccount.platformAccountId,
-                    accessToken: socialAccount.accessToken,
+                    accessToken: getSocialAccountToken(socialAccount, "accessToken"),
                     imageUrl: post.mediaUrls[0],
                     caption: post.content,
                 });
@@ -192,7 +193,7 @@ const publishPost = async (req, res) => {
                 for (let attempt = 0; attempt < 10; attempt++) {
                     containerStatus = await getInstagramMediaContainerStatus({
                         containerId: container.id,
-                        accessToken: socialAccount.accessToken,
+                        accessToken: getSocialAccountToken(socialAccount, "accessToken"),
                     });
 
                     if (containerStatus.status_code === "FINISHED") {
@@ -217,7 +218,7 @@ const publishPost = async (req, res) => {
 
                 const result = await publishInstagramMediaContainer({
                     instagramAccountId: socialAccount.platformAccountId,
-                    accessToken: socialAccount.accessToken,
+                    accessToken: getSocialAccountToken(socialAccount, "accessToken"),
                     containerId: container.id,
                 });
 

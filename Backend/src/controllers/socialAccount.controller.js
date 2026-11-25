@@ -4,6 +4,7 @@ import Business from "../models/business.model.js";
 import axios from "axios";
 import crypto from "crypto";
 import jwt from "jsonwebtoken";
+import { getSocialAccountToken, setSocialAccountToken } from "../services/social-token-crypto.service.js";
 
 async function keepOnlyInstagramAccount(businessId, socialAccountId) {
     await SocialAccount.updateMany(
@@ -17,6 +18,8 @@ async function keepOnlyInstagramAccount(businessId, socialAccountId) {
                 status: "disconnected",
                 accessToken: null,
                 refreshToken: null,
+                accessTokenEncrypted: null,
+                refreshTokenEncrypted: null,
                 tokenExpiresAt: null,
             },
         }
@@ -62,23 +65,24 @@ const createSocialAccount = async (req, res) => {
 
         if (socialAccount) {
             socialAccount.accountName = accountName || socialAccount.accountName;
-            socialAccount.accessToken = accessToken || socialAccount.accessToken;
-            socialAccount.refreshToken = refreshToken || socialAccount.refreshToken;
+            if (accessToken) setSocialAccountToken(socialAccount, "accessToken", accessToken);
+            if (refreshToken) setSocialAccountToken(socialAccount, "refreshToken", refreshToken);
             socialAccount.tokenExpiresAt = tokenExpiresAt || socialAccount.tokenExpiresAt;
             socialAccount.status = "connected";
             socialAccount.connectedAt = new Date();
             await socialAccount.save();
         } else {
-            socialAccount = await SocialAccount.create({
+            socialAccount = new SocialAccount({
                 businessId,
                 platform,
                 platformAccountId,
                 accountName,
-                accessToken,
-                refreshToken,
                 tokenExpiresAt,
                 connectedAt: new Date(),
             });
+            if (accessToken) setSocialAccountToken(socialAccount, "accessToken", accessToken);
+            if (refreshToken) setSocialAccountToken(socialAccount, "refreshToken", refreshToken);
+            await socialAccount.save();
         }
 
         if (platform === "instagram") {
@@ -172,7 +176,7 @@ const keepInstagramAccount = async (req, res) => {
         }
 
         if (
-            !socialAccount.accessToken ||
+            !getSocialAccountToken(socialAccount, "accessToken") ||
             (socialAccount.tokenExpiresAt && socialAccount.tokenExpiresAt <= new Date())
         ) {
             return res.status(409).json({
@@ -357,7 +361,7 @@ const instagramCallback = async (req, res) => {
         // Update existing account
         if (existingAccount) {
             existingAccount.platformAccountId = String(instagramUserId);
-            existingAccount.accessToken = longLivedAccessToken;
+            setSocialAccountToken(existingAccount, "accessToken", longLivedAccessToken);
             existingAccount.tokenExpiresAt = tokenExpiresAt;
             existingAccount.accountName = instagramUsername;
             existingAccount.status = "connected";
@@ -368,16 +372,17 @@ const instagramCallback = async (req, res) => {
 
         // Create new account when this Instagram ID has not been linked before.
         else {
-            socialAccount = await SocialAccount.create({
+            socialAccount = new SocialAccount({
                 businessId,
                 platform: "instagram",
                 platformAccountId: String(instagramUserId),
                 accountName: instagramUsername,
-                accessToken: longLivedAccessToken,
                 tokenExpiresAt,
                 status: "connected",
                 connectedAt: new Date(),
             });
+            setSocialAccountToken(socialAccount, "accessToken", longLivedAccessToken);
+            await socialAccount.save();
         }
 
         // A business may publish to only one Instagram account. Reauthorization replaces
