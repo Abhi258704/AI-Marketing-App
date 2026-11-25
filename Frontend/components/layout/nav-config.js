@@ -9,6 +9,7 @@ import {
   LayoutDashboard,
   Link2,
   ListChecks,
+  MessageSquareText,
   QrCode,
   Search,
   Settings,
