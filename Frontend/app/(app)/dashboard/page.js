@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { BarChart3, Bell, CalendarClock, ClipboardCheck, FileText, Link2, Sparkles } from "lucide-react";
+import { BarChart3, Bell, CalendarClock, ClipboardCheck, FileText, Link2, Sparkles, Store } from "lucide-react";
+import { Facebook, Instagram } from "@/components/ui/brand-icons";
 import { RequireBusiness } from "@/components/layout/require-business";
 import { PlatformBadges, PostStatusBadge } from "@/components/posts/post-badges";
 import { usePublicationRecords } from "@/components/posts/use-publication-record";
@@ -84,7 +85,6 @@ function DashboardContent({ business }) {
   const gbpDetail = gbpConnected
     ? googleMapping.data?.mapping?.locationTitle || googleConnection.data?.connection?.googleName || "Google account connected"
     : undefined;
-
   const { facebook, instagram } = splitBySource(analytics.data?.analytics || []);
   const igLatest = instagramWindows(instagram)[0];
 
@@ -104,26 +104,32 @@ function DashboardContent({ business }) {
       </div>
 
       <div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-        {[["Facebook", fb], ["Instagram", ig]].map(([name, c]) => (
-          <Stat key={name} label={name} value={accounts.loading && !accounts.data ? "…" : c.label} hint={accounts.error ? "Couldn't check" : c.detail || undefined}>
-            {!accounts.loading && <Badge tone={c.tone} className="mt-2">{c.label}</Badge>}
-          </Stat>
+        {[
+          { name: "Facebook", Icon: Facebook, iconClass: "bg-[#1877F2] text-white", status: accounts.loading && !accounts.data ? "…" : fb.label, detail: accounts.error ? "Couldn't check connection" : fb.label === "Connected" ? fb.detail : undefined, action: fb.label === "Needs reconnecting" ? "Reconnect now" : "Connect now", connected: fb.label === "Connected", tone: fb.tone },
+          { name: "Instagram", Icon: Instagram, iconClass: "bg-gradient-to-br from-[#7C35B8] via-[#E1306C] to-[#FCAF45] text-white", status: accounts.loading && !accounts.data ? "…" : ig.label, detail: accounts.error ? "Couldn't check connection" : ig.label === "Connected" ? ig.detail : undefined, action: ig.label === "Needs reconnecting" ? "Reconnect now" : "Connect now", connected: ig.label === "Connected", tone: ig.tone },
+          { name: "Google Business Profile", Icon: Store, iconClass: "bg-[#4285F4] text-white", status: gbpStatus, detail: googleConnection.error ? "Couldn't check connection" : gbpConnected ? gbpDetail : undefined, action: "Connect now", connected: gbpConnected, tone: googleConnection.error ? "danger" : gbpConnected ? "success" : "neutral" },
+        ].map(({ name, Icon, iconClass, status, detail, action, connected, tone }) => (
+          <Link key={name} href="/social-accounts" className="group flex min-h-[140px] flex-col rounded-xl border border-line bg-surface p-4 shadow-[0_1px_2px_rgb(0_0_0/0.03)] transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+            <div className="flex items-center gap-2.5">
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${iconClass}`}>
+                <Icon className="h-5 w-5" aria-hidden />
+              </span>
+              <p className="min-w-0 truncate text-xs font-medium uppercase tracking-wide text-muted">{name}</p>
+            </div>
+            <p className="mt-2 text-2xl font-semibold leading-tight text-ink">{status}</p>
+            {detail ? <p className="mt-1 truncate text-xs text-muted">{detail}</p> : <div className="mt-1 min-h-[16px]" />}
+            <div className="mt-auto pt-2">
+              {connected ? <Badge tone={tone}>Connected</Badge> : (
+                <span className="inline-flex h-8 items-center rounded-lg bg-brand-700 px-3 text-sm font-medium text-white shadow-sm transition-colors group-hover:bg-brand-800">{action}</span>
+              )}
+            </div>
+          </Link>
         ))}
-        <Link href="/social-accounts" className="block rounded-xl transition-shadow hover:shadow-md">
-          <Stat label="Google Business Profile" value={gbpStatus} hint={googleConnection.error ? "Retry in social accounts" : gbpDetail || "Manage Google connection"}>
-            {!googleConnection.loading && <Badge tone={googleConnection.error ? "danger" : gbpConnected ? "success" : "neutral"} className="mt-2">{gbpStatus}</Badge>}
-          </Stat>
-        </Link>
         <Link href="/notifications" className="block rounded-xl transition-shadow hover:shadow-md">
-          <Stat label="Unread notifications" value={formatNumber(unreadCount)} icon={Bell} hint="View all" />
+          <Stat label="Unread notifications" value={formatNumber(unreadCount)} icon={Bell} hint="View all" className="h-full min-h-[140px]" />
         </Link>
         <Link href="/audits" className="block rounded-xl transition-shadow hover:shadow-md">
-          <Stat
-            label="Latest profile audit"
-            value={latestAudit ? `${latestAudit.profileScore ?? "–"}/100` : "No audit yet"}
-            icon={ClipboardCheck}
-            hint={latestAudit ? `AI-generated · ${formatDateTime(latestAudit.createdAt)}` : "Run one to get a score"}
-          />
+          <Stat label="Latest profile audit" value={latestAudit ? `${latestAudit.profileScore ?? "–"}/100` : "No audit yet"} icon={ClipboardCheck} hint={latestAudit ? `AI-generated · ${formatDateTime(latestAudit.createdAt)}` : "Run one to get a score"} className="h-full min-h-[140px]" />
         </Link>
       </div>
 
