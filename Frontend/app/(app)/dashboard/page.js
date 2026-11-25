@@ -17,7 +17,7 @@ import { listPosts } from "@/lib/api/posts";
 import { listSocialAccounts } from "@/lib/api/social-accounts";
 import { getAnalytics } from "@/lib/api/analytics";
 import { listAuditRecommendations } from "@/lib/api/recommendations";
-import { getGoogleBusinessConnection } from "@/lib/api/google-business";
+import { getGoogleBusinessConnection, getGoogleBusinessLocationMapping } from "@/lib/api/google-business";
 import { effectiveStatus } from "@/lib/post-rules";
 import { getAuditHistory } from "@/lib/local-store";
 import { FACEBOOK_METRICS, INSTAGRAM_METRICS, instagramWindows, latestFacebookValue, splitBySource } from "@/lib/analytics";
@@ -55,6 +55,11 @@ function DashboardContent({ business }) {
 
   const accounts = useApi(() => listSocialAccounts(business._id), [business._id]);
   const googleConnection = useApi(() => getGoogleBusinessConnection(), []);
+  const googleMapping = useApi(
+    () => getGoogleBusinessLocationMapping(business._id),
+    [business._id],
+    { enabled: Boolean(googleConnection.data?.connected) }
+  );
   const postsRes = useApi(() => listPosts(), []);
   const analytics = useApi(() => getAnalytics(business._id, { from: `${daysAgoInput(29)}T00:00:00.000Z` }), [business._id]);
 
@@ -76,6 +81,9 @@ function DashboardContent({ business }) {
   const ig = connectionOf(accountList, "instagram");
   const gbpConnected = Boolean(googleConnection.data?.connected);
   const gbpStatus = googleConnection.loading ? "…" : googleConnection.error ? "Couldn’t check" : gbpConnected ? "Connected" : "Not connected";
+  const gbpDetail = gbpConnected
+    ? googleMapping.data?.mapping?.locationTitle || googleConnection.data?.connection?.googleName || "Google account connected"
+    : undefined;
   const { facebook, instagram } = splitBySource(analytics.data?.analytics || []);
   const igLatest = instagramWindows(instagram)[0];
 
@@ -107,7 +115,7 @@ function DashboardContent({ business }) {
           </Link>
         ))}
         <Link href="/social-accounts" className="block rounded-xl transition-shadow hover:shadow-md">
-          <Stat label="Google Business Profile" value={gbpStatus}>
+          <Stat label="Google Business Profile" value={gbpStatus} hint={gbpConnected ? gbpDetail : undefined}>
             {!googleConnection.loading && <Badge tone={googleConnection.error ? "danger" : gbpConnected ? "success" : "neutral"} className="mt-2">{gbpStatus}</Badge>}
           </Stat>
         </Link>
