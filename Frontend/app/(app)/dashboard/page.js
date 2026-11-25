@@ -108,7 +108,13 @@ function DashboardContent({ business }) {
             <Stat
               label={name}
               value={accounts.loading && !accounts.data ? "…" : c.label}
-              hint={accounts.error ? "Couldn't check" : c.label === "Connected" ? c.detail : c.label === "Needs reconnecting" ? "Reconnect now" : "Connect now"}
+              hint={
+                accounts.error ? "Couldn't check" : c.label === "Connected" ? c.detail : (
+                  <span className="inline-flex items-center rounded-md bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm">
+                    {c.label === "Needs reconnecting" ? "Reconnect now" : "Connect now"}
+                  </span>
+                )
+              }
             >
               {!accounts.loading && <Badge tone={c.tone} className="mt-2">{c.label}</Badge>}
             </Stat>
