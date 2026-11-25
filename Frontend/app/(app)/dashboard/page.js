@@ -17,7 +17,7 @@ import { listPosts } from "@/lib/api/posts";
 import { listSocialAccounts } from "@/lib/api/social-accounts";
 import { getAnalytics } from "@/lib/api/analytics";
 import { listAuditRecommendations } from "@/lib/api/recommendations";
-import { getGoogleBusinessConnection, getGoogleBusinessLocationMapping } from "@/lib/api/google-business";
+import { getGoogleBusinessConnection } from "@/lib/api/google-business";
 import { effectiveStatus } from "@/lib/post-rules";
 import { getAuditHistory } from "@/lib/local-store";
 import { FACEBOOK_METRICS, INSTAGRAM_METRICS, instagramWindows, latestFacebookValue, splitBySource } from "@/lib/analytics";
@@ -55,11 +55,6 @@ function DashboardContent({ business }) {
 
   const accounts = useApi(() => listSocialAccounts(business._id), [business._id]);
   const googleConnection = useApi(() => getGoogleBusinessConnection(), []);
-  const googleMapping = useApi(
-    () => getGoogleBusinessLocationMapping(business._id),
-    [business._id],
-    { enabled: Boolean(googleConnection.data?.connected) }
-  );
   const postsRes = useApi(() => listPosts(), []);
   const analytics = useApi(() => getAnalytics(business._id, { from: `${daysAgoInput(29)}T00:00:00.000Z` }), [business._id]);
 
