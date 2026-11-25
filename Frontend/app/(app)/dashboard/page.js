@@ -81,10 +81,6 @@ function DashboardContent({ business }) {
   const ig = connectionOf(accountList, "instagram");
   const gbpConnected = Boolean(googleConnection.data?.connected);
   const gbpStatus = googleConnection.loading ? "…" : googleConnection.error ? "Couldn’t check" : gbpConnected ? "Connected" : "Not connected";
-  const gbpDetail = gbpConnected
-    ? googleMapping.data?.mapping?.locationTitle || googleConnection.data?.connection?.googleName || "Google account connected"
-    : undefined;
-
   const { facebook, instagram } = splitBySource(analytics.data?.analytics || []);
   const igLatest = instagramWindows(instagram)[0];
 
