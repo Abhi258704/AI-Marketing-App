@@ -38,11 +38,21 @@ body {
 }
 
 /* Use the hand cursor for anything that behaves like an interactive control. */
-:where(a, button:not(:disabled), [role="button"], summary, label[for]) {
+:where(
+  a,
+  button:not(:disabled),
+  select:not(:disabled),
+  [role="button"],
+  [role="combobox"],
+  [role="option"],
+  [aria-haspopup],
+  summary,
+  label[for]
+) {
   cursor: pointer;
 }
 
-:where(button:disabled, [aria-disabled="true"]) {
+:where(button:disabled, select:disabled, [aria-disabled="true"]) {
   cursor: not-allowed;
 }
 
