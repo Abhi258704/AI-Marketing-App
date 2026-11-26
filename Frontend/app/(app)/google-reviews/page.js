@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { MessageSquareText, RefreshCw, Star, ExternalLink, Sparkles, Copy, Check } from "lucide-react";
+import { MessageSquareText, RefreshCw, Star, ExternalLink, Sparkles, Copy, Check, X, Globe2 } from "lucide-react";
 import { useBusiness } from "@/components/providers/business-provider";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/feedback";
@@ -45,6 +45,7 @@ export default function GoogleReviewsPage() {
   const [reconcilingReviewId, setReconcilingReviewId] = useState("");
   const [publishingReviewId, setPublishingReviewId] = useState("");
   const [showingMockReviews, setShowingMockReviews] = useState(false);
+  const [pendingPublishReview, setPendingPublishReview] = useState(null);
   const isDevelopment = process.env.NODE_ENV !== "production";
 
   const loadReviews = useCallback(async ({ append = false } = {}) => {
@@ -162,15 +163,18 @@ export default function GoogleReviewsPage() {
     }
   };
 
-  const publishReply = async (review) => {
+  const publishReply = (review) => {
     const reviewId = review.name || review.reviewId;
     if (!businessId || !reviewId || review.isMock || !savedReviewIds[reviewId] || publishedReviewIds[reviewId]) return;
+    setPendingPublishReview(review);
+  };
 
-    const warning = review.reviewReply?.comment
-      ? "This review already has an owner reply. Publishing will replace that existing reply with the saved draft. Continue?"
-      : "This will publish the saved reply publicly on Google. Continue?";
-    if (!window.confirm(warning)) return;
+  const confirmPublishReply = async () => {
+    const review = pendingPublishReview;
+    const reviewId = review?.name || review?.reviewId;
+    if (!review || !businessId || !reviewId || !savedReviewIds[reviewId] || publishedReviewIds[reviewId]) return;
 
+    setPendingPublishReview(null);
     setPublishingReviewId(reviewId);
     setDraftErrors((current) => ({ ...current, [reviewId]: "" }));
     try {
@@ -218,7 +222,38 @@ export default function GoogleReviewsPage() {
 
   const average = typeof data?.averageRating === "number" ? data.averageRating.toFixed(1) : "—";
 
+  const replacingExistingReply = Boolean(pendingPublishReview?.reviewReply?.comment);
+
   return <>
+    {pendingPublishReview && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onMouseDown={(event) => {
+      if (event.target === event.currentTarget && !publishingReviewId) setPendingPublishReview(null);
+    }}>
+      <div role="dialog" aria-modal="true" aria-labelledby="publish-review-title" aria-describedby="publish-review-description" className="w-full max-w-md overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl">
+        <div className="flex items-start justify-between gap-4 border-b border-line p-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-50 text-brand-700"><Globe2 className="h-5 w-5" /></div>
+            <div><h2 id="publish-review-title" className="text-base font-semibold">Publish reply on Google?</h2><p className="mt-0.5 text-sm text-muted">This action will be visible publicly.</p></div>
+          </div>
+          <button type="button" aria-label="Close confirmation" onClick={() => setPendingPublishReview(null)} disabled={Boolean(publishingReviewId)} className="rounded-lg p-1.5 text-muted transition hover:bg-sunken hover:text-foreground disabled:opacity-50"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="space-y-3 p-5">
+          <p id="publish-review-description" className="text-sm leading-6 text-foreground">
+            {replacingExistingReply
+              ? "This review already has an owner reply. Publishing will replace that existing reply with your saved draft."
+              : "Your saved reply will be published publicly as the business owner on Google."}
+          </p>
+          <div className="rounded-lg border border-line bg-sunken p-3">
+            <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">Saved reply preview</p>
+            <p className="whitespace-pre-wrap text-sm leading-6">{drafts[pendingPublishReview.name || pendingPublishReview.reviewId]}</p>
+          </div>
+          <p className="text-xs text-muted">You can’t undo this from the app. Make sure the reply is ready before publishing.</p>
+        </div>
+        <div className="flex flex-col-reverse gap-2 border-t border-line p-4 sm:flex-row sm:justify-end">
+          <Button type="button" variant="secondary" onClick={() => setPendingPublishReview(null)} disabled={Boolean(publishingReviewId)}>Cancel</Button>
+          <Button type="button" onClick={confirmPublishReply} disabled={Boolean(publishingReviewId)}><Globe2 className="h-4 w-4" /> Approve &amp; publish</Button>
+        </div>
+      </div>
+    </div>}
     <PageHeader title="Google reviews" description={activeBusiness ? `Read reviews from the Google Business Profile linked to ${activeBusiness.name}.` : "Select a business to view its Google reviews."}
       actions={<>
         {isDevelopment && <Button variant="secondary" size="sm" onClick={loadMockReview} disabled={!businessId}>Load test review</Button>}
