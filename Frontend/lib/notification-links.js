@@ -11,8 +11,6 @@ export function notificationTarget(n) {
       return { href: "/audits", label: "View audit" };
     case "recommendation_completed":
       return { href: "/recommendations", label: "View recommendations" };
-    case "review_received":
-      return { href: "/reviews", label: "Review feedback" };
     default:
       return null;
   }
@@ -24,6 +22,5 @@ export const NOTIFICATION_TONES = {
   post_partially_published: "warning",
   audit_completed: "brand",
   recommendation_completed: "success",
-  review_received: "brand",
   general: "neutral",
 };

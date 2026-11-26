@@ -66,3 +66,6 @@ export const reconcileGoogleBusinessReviewReply = (businessId, reviewId) =>
     `/api/google-business/businesses/${encodeURIComponent(businessId)}/reviews/${encodeURIComponent(reviewId)}/reconcile-reply`,
     { method: "POST" }
   );
+
+export const getGoogleBusinessReviewLink = (businessId) =>
+  apiFetch(`/api/google-business/businesses/${encodeURIComponent(businessId)}/review-link`);

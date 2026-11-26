@@ -48,9 +48,8 @@ export const NAV_GROUPS = [
     label: "Manage",
     items: [
       { href: "/businesses", label: "Businesses", icon: Building2 },
-      { href: "/qr-codes", label: "Feedback QR codes", icon: QrCode },
+      { href: "/qr-codes", label: "Google Review QR", icon: QrCode },
       { href: "/social-accounts", label: "Social accounts", icon: Link2 },
-      { href: "/reviews", label: "Review moderation", icon: MessageSquareText },
       { href: "/google-reviews", label: "Google reviews", icon: MessageSquareText },
       { href: "/notifications", label: "Notifications", icon: Bell },
       { href: "/settings", label: "Settings", icon: Settings },

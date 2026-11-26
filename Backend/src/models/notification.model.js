@@ -22,7 +22,6 @@ const notificationSchema = new mongoose.Schema(
                 "post_partially_published",
                 "audit_completed",
                 "recommendation_completed",
-                "review_received",
                 "general",
             ],
             required: true,
